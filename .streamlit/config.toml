@@ -1,0 +1,14 @@
+[theme]
+primaryColor="#f81721"
+backgroundColor="#1c1e25"
+secondaryBackgroundColor="#20232b"
+
+textColor="#ffffff"
+
+# Font family for all text in the app, except code blocks
+# Accepted values (serif | sans serif | monospace) 
+# Default: "sans serif"
+font = "sans serif"
+
+[client]
+showSidebarNavigation = false
