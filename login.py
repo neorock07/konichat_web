@@ -24,11 +24,15 @@ st.set_page_config("KoniChat | Login", page_icon="assets/fav.png")
 def handle_login(nik, password):
     logger.debug(f"Iki coeg : {nik}")
     text = login(int(nik), password)
-    if text is not None or text is not '':
+    if text is not 'error':
         st.toast("✅ Login berhasil")
         st.session_state.logged_in = True
         st.session_state.user_data = text
-        st.switch_page("pages\\app.py")
+        if text['role'] == 1:
+            st.switch_page("pages\\admin.py")
+        else:
+            st.switch_page("pages\\app.py")
+                
     else:
         st.toast("❌ Login Gagal")            
 

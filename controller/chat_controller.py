@@ -130,6 +130,31 @@ def get_session_experimental(id:str):
             return response
 
     except Exception as e:
+           logging.exception(e)   
+                   
+def get_conversation_by_id(id:str):
+    data = {
+        "id_session" : id
+        }
+        
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/chat/id/'
+        
+    try:
+            # Melakukan POST request ke endpoint
+        response = requests.get(url, json=data)
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+            st.toast("✅ Berhasil memulihkan chat")
+            logger.debug(f"sesi : {response.json()}")
+            return response.json()['data']
+        else:
+            st.toast("❌ Gagal memulihkan chat")
+            return response
+
+    except Exception as e:
            logging.exception(e)           
 
 def save_session_experimental(data:SessionModel):
@@ -153,7 +178,7 @@ def save_session_experimental(data:SessionModel):
         response = requests.post(url, json=data)
             
          # Memeriksa apakah request berhasil
-        if response.status_code == 200:
+        if response.status_code == 201:
                 # Mengambil respons JSON
                 st.toast("✅ Sesi Baru")
         else:

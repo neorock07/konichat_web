@@ -25,9 +25,13 @@ from controller.chat_controller import save_chat_experimental
 from controller.chat_controller import save_session_experimental
 from controller.chat_controller import get_chat_experimental
 from controller.chat_controller import get_session_experimental
+from controller.chat_controller import get_conversation_by_id
 from modelMsg.chat_model import ChatModel
 from modelMsg.session_model import SessionModel
 from datetime import datetime
+from functools import partial
+from layout.custom_layout import st_fixed_container
+from controller.auth_controller import logout
 
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
@@ -81,13 +85,43 @@ def handle_feedback():
 
 st.title(f"Hi, {data_login['username']}!")
 
-st.sidebar.markdown("KoniChat | Chat").caption("KoniChat can make mistakes. Check important info.")
-prompt: str = st.chat_input("chat disini!")
-
-    
+st.markdown(
+    """
+    <style>
+    .fixed-container {
+        position: fixed;
+        bottom: 20px; /* Atur sesuai kebutuhan */
+        width: 100%;  /* Memastikan container memenuhi lebar sidebar */
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
+# """
+#     constanta, sebagai key session message dan actor message
+# """    
 USER = "user"
 AI = "assistant"
 MESSAGES = "messages"
+
+# """
+#     kode untuk layout sidebar profile and button new chat
+# """
+st.sidebar.markdown(f"<p style='font-size:60px;' >{data_login['username']}</p>", unsafe_allow_html=True)
+st.sidebar.markdown("KoniChat | Chat").caption("KoniChat can make mistakes. Check important info.")
+if st.sidebar.button("New Chat ✒"):
+    st.toast("new chat")
+    st.query_params['c'] = "automodel"
+    st.session_state[MESSAGES].clear()
+    del st.session_state.continue_history
+    
+st.sidebar.subheader("History Chat")
+st.sidebar.divider()
+# """
+#     UI chat text-field
+# """
+prompt: str = st.chat_input("chat disini!")
+
+
 
 if 'run_id' not in st.session_state:
     st.session_state.run_id = uuid.uuid4().hex
@@ -106,27 +140,74 @@ for idx, msg in enumerate(st.session_state[MESSAGES]):
         key=f"message_{idx}"  # Unique key for each message
     )
 
-with st.sidebar:
-    if isinstance(chat_list, list):
-        for i in chat_list:
-            st.button( i['title'] if len(i['title']) < 30 else str(i['title'])[:30] , use_container_width=True, key=uuid.uuid4().hex)
-                
+# """
+#     kode untuk load previous chat dan assign ke session
+#     yang akan digunakan ke memory model.
+# """
+id_session_history = None
+history_prev = []
+def print_log(msg):
+    logger.debug(msg)
+    # st.toast(msg)
+    id_session_history = msg
+    st.query_params['c'] = msg
+    with st.spinner('loading...'):
+        logger.debug(f"sesi prev session : {id_session_history}")
+        # """
+        #     mendapatkan history chat berdasarkan id_session
+        # """
+        result = get_conversation_by_id(msg)
+        st.session_state[MESSAGES].clear()
+        st.session_state.continue_history = True
+        st.session_state.id_sesi_prev = id_session_history
+        # """
+        #     tambahkan ke session messages untuk dirender
+        #     ke bentuk chatbox.
+        # """
+        for id, data in enumerate(result):
+            st.session_state[MESSAGES].append(Message(actor=USER, payload=data['human_query']))
+            st.session_state[MESSAGES].append(Message(actor=AI, payload=data['ai_respon'])) 
+            history_prev.extend(
+                [
+                    f"human question : {data['human_query']}",
+                    f"your answer : {data['ai_respon']}",
+                ]
+            )
+        st.session_state[id_session_history] = history_prev        
     
-  
+# """
+#     membuat list button untuk mengarahkan ke history chat.
+# """    
+if len(chat_list) > 0:
+    for i in chat_list:
+        st.sidebar.button(i['title'] if len(i['title']) < 30 else str(i['title'])[:30],
+                        key=uuid.uuid4().hex,
+                        use_container_width=True,
+                        on_click=lambda msg=i['id_session']: print_log(msg))
+
+# """
+#     membuat button logout
+# """        
+with st.sidebar:
+    with st_fixed_container(mode="fixed", position="bottom", border=True, height=80, margin="bottom", key="asdasd"):
+            if st.button("Log out 📤", use_container_width=True):
+                logout()
+                   
+    
+# """
+#     jika human memulai percakapan
+# """  
 if prompt:
     
     human_query = prompt
     st.session_state[MESSAGES].append(Message(actor=USER, payload=prompt))
-    # st.chat_message(USER, avatar="🧑").write(prompt)
     message(prompt, is_user= True, avatar_style='personas', seed=USER)
     
     with st.spinner("KoniChat sedang mengetik..."):
-        # response, time_respon = predict(prompt)
         response, time_respon = inference(rag_chain, Prompt(query=human_query, role=data_login['role'], id=data_login['id']))
         ai_respon = response
         #tambah ke session messages
         st.session_state[MESSAGES].append(Message(actor=AI, payload=response))
-        # st.session_state[MESSAGES].append(Message(actor=AI, payload=response))
         
         #tampilkan ke chatbox
         generate_response(Message(actor=AI, payload=response), time_respon=time_respon)
@@ -137,25 +218,37 @@ if prompt:
         #     cek sesi apakah sudah dibuat dan apakah sudah de-aktif,
         #     simpan jika masih kondisi true.
         # """
-        
-        if 'isSessionCreated' in st.session_state and st.session_state.isSessionCreated is True:
-            save_session_experimental(SessionModel(
-                id_session=f"chat_history_{st.session_state.session_id}",
-                tanggal = formatted_time,
-                title = prompt,
-                id_user = data_login['id']
-                ))
-            
+        if id_session_history is None:
+            if 'isSessionCreated' in st.session_state and st.session_state.isSessionCreated is True:
+                save_session_experimental(SessionModel(
+                    id_session=f"chat_history_{st.session_state.session_id}",
+                    tanggal = formatted_time,
+                    title = prompt,
+                    id_user = data_login['id']
+                    ))
             st.session_state.isSessionCreated = False
+                
+        else:
+            st.session_state.isSessionCreated = False
+                    
         # """
         #     simpan data setiap kali percakapan
         # """
-        save_chat_experimental(ChatModel(
-            ai_respon=response,
-            human_query=prompt,
-            tanggal=formatted_time,
-            id_session=f"chat_history_{st.session_state.session_id}"))
-        
+        if id_session_history is None:
+            save_chat_experimental(ChatModel(
+                ai_respon=response,
+                human_query=prompt,
+                tanggal=formatted_time,
+                id_session=f"chat_history_{st.session_state.session_id}"))
+        else:
+            save_chat_experimental(ChatModel(
+                ai_respon=response,
+                human_query=prompt,
+                tanggal=formatted_time,
+                id_session=id_session_history))
+        # """
+        #     get new history chat dari percakapan terkini
+        # """        
         chat_list = get_session_experimental(id=data_login['id'])
             
         

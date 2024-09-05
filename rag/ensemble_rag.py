@@ -77,7 +77,7 @@ def init_rag():
     #define model LLM : USE MODEL -> llama3.1:8b [4.7 GB]    
     # llm = Ollama(model="llama3.1:8b", temperature=0, base_url="https://382a-34-67-240-41.ngrok-free.app")
     # llm = Ollama(model="llama3.1:8b", temperature=0, base_url="https://903a-34-125-254-184.ngrok-free.app")
-    llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://f83b-34-105-110-156.ngrok-free.app")
+    llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://e816-34-83-196-251.ngrok-free.app")
     #membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
     #membuat vectorstore dan retriever untuk role user    
@@ -87,7 +87,7 @@ def init_rag():
     retriever = vectorstore.as_retriever()
 
     #membuat vectorstore dan retriever untuk role admin    
-    docs_admin = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\backend_django\\backend_koni\\backend_app\\rag\\uud.pdf")
+    docs_admin = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\web\\rag\\NIPS-2017-attention-is-all-you-need-Paper.pdf")
     documents_admin = split_docs(documents=docs_admin)
     vectorstore_admin = create_embeddings(documents_admin, embed, storing_path="vectorstore_admin")
     retriever_admin = vectorstore_admin.as_retriever()
