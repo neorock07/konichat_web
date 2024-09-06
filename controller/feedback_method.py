@@ -45,3 +45,26 @@ def feedback(tipe, feedback:str, ai_respon:str, query:str):
 
     except Exception as e:
            logging.exception(e)
+           
+def get_count_feedback():    
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/feedback/count'
+        
+    try:
+        # Melakukan POST request ke endpoint
+        response = requests.get(url)
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+                logger.debug("berhasil get feedback")
+                st.toast("✔️ Got Feedback")
+                return response.json()['data']
+        else:
+                logger.debug("gagal get feedback")
+                st.toast("❌ Couldn't get feedback")
+                return "error"    
+    except Exception as e:
+           logging.exception(e)
+           
+           

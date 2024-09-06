@@ -56,13 +56,19 @@ if 'isSessionCreated' not in st.session_state:
 chat_list = None
 session = None
 rag_chain = None
-
+# """
+#     inisiasi session baru, jika ke history chat pakai session yg lama.
+#     init_rag -> proses embeddings dijalankan satu kali ketika streamlit di running.
+# """
 if 'user_data' in st.session_state:
     data_login = st.session_state.user_data
     session = requests.Session()
     rag_chain = init_rag()
     chat_history = []
     chat_list = get_session_experimental(id=data_login['id'])
+# """
+#     redirect ke halaman login jika user belum login / sesi belum dibuat.
+# """
 else:
     st.switch_page("login.py")    
 
