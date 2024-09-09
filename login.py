@@ -1,3 +1,4 @@
+
 import streamlit as st
 import requests
 import logging
@@ -22,19 +23,21 @@ logger = logging.getLogger(__name__)
 # """
 st.set_page_config("KoniChat | Login", page_icon="assets/fav.png")
 def handle_login(nik, password):
-    logger.debug(f"Iki coeg : {nik}")
-    text = login(int(nik), password)
-    if text is not 'error':
-        st.toast("✅ Login berhasil")
-        st.session_state.logged_in = True
-        st.session_state.user_data = text
-        if text['role'] == 1:
-            st.switch_page("pages\\admin.py")
+    if nik.isdigit() :
+        text = login(int(nik), password)
+        if text is not 'error':
+            st.toast("✅ Login berhasil")
+            st.session_state.logged_in = True
+            st.session_state.user_data = text
+            if text['name_role'] == 'admin':
+                st.switch_page("pages\\admin.py")
+            else:
+                st.switch_page("pages\\app.py")
+                    
         else:
-            st.switch_page("pages\\app.py")
-                
+            st.toast("❌ Login Gagal")
     else:
-        st.toast("❌ Login Gagal")            
+        st.warning("Mohon isi dengan format yang sesuai!")                    
 
 # st.set_page_config(page_title="Konichat | login", page_icon="assets/fav.png")
 col_title, col_img = st.columns(2)

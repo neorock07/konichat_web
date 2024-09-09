@@ -25,7 +25,7 @@ AI = "assistant"
 MESSAGES = "messages"
 
 """
-    function untuk menampilkan ke bentuk chatbox dan efek typing jika respon ai.
+    function untuk menampilkan ke bentuk chatbox jika respon ai.
     
     params:
         msg (Message) : objek dari Message class, berisi actor dan payload message
@@ -35,19 +35,13 @@ MESSAGES = "messages"
 """
 
 def generate_response(msg:Message, time_respon:str):
-    # Simulasi efek typing
     typing_area = st.empty()
     # Kecepatan mengetik dalam detik per karakter
-    typing_speed = 0.01  
+    typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
     
-    displayed_text = ""
-    for char in msg.payload:
-        displayed_text += char
-        typing_area.chat_message(msg.actor, avatar="🎓").write(displayed_text)
-        time.sleep(typing_speed)
-    #kosongkan area after typing
-    typing_area.empty()
-    message(displayed_text, is_user= True if msg.actor == USER else False, avatar_style='miniavs', seed=msg.actor, key=uuid.uuid4().hex)
+    # """
+    #     button copy message & container waktu response model
+    # """
     st.button("📄", on_click=on_copy_click, args=(msg.payload, )) if msg.actor == AI else None
     annotated_text(
     ("waktu respon",f"{time_respon:.2f} s"),

@@ -13,6 +13,8 @@ from langchain_core.runnables import RunnablePassthrough
 from dataclasses import dataclass
 import time
 import streamlit as st
+from controller.document_controller import download_doc, get_all_docs, get_by_id_docs
+
 
 # Mengatur konfigurasi logging
 logging.basicConfig(
@@ -27,12 +29,57 @@ def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
 rag_dic = None
+file_path_manager = None
+file_path_user = None
 
-@st.cache_resource()
-def init_rag():
+# """
+#     mengambil seluruh data dokumen;
+#     tujuan : `mengambil data semua lalu process satu waktu`
+#     cons : `time consume terlalu banyak`
+# """
+def load_downloaded_file():
+    global file_path_manager
+    global file_path_user
+    docs_all = get_all_docs()
+    docs_manager = docs_all[0]
+    docs_user = docs_all[1]
+    
+    file_path_manager = download_doc(docs_manager['file'], docs_manager['title'])
+    file_path_user = download_doc(docs_user['file'], docs_user['title'])
+    return file_path_manager, file_path_user
+
+
+# """
+#     gunakan ini untuk mendownload 1 document sesuai role user yang login;    
+#     mengambil seluruh data dokumen;
+#     tujuan : `mengambil data sesuai role lalu process`
+#     cons : `time consume minim hanya 1 doc`
+# """
+
+def load_downloaded_file_byId(role):
+    docs = get_by_id_docs(role) 
+    file_path = download_doc(docs['file'], docs['title'])
+    return file_path
+
+# """
+#     function untuk memproses embedding document;
+# """
+def process_embedding(role, embed):
+    doc_path = load_downloaded_file_byId(role)
+    #membuat vectorstore dan retriever    
+    docs = load_pdf_data(file_path=doc_path)
+    # docs = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\web\\rag\\Contoh-Draft-Peraturan-Perusahaan.pdf")
+    documents = split_docs(documents=docs, chunk_size=1500, chunk_overlap=300)
+    vectorstore = create_embeddings(documents, embed)
+    retriever = vectorstore.as_retriever()
+    return retriever
+
+
+def init_rag(role:str):
     global rag_dic
-    chat_history = []
-    chat_history_admin = []
+    
+    # chat_history = []
+    # chat_history_admin = []
     #  #template prompt untuk mengatur respon model LLM,
     # #agar disesuaikan dengan konteks yang diberikan
     template = """
@@ -73,26 +120,41 @@ def init_rag():
         which can be understood without the chat history.\
         just reformulate it if needed otherwise return it as you have answer it.
         """
-        
+    
+    # docs_all = get_all_docs()
+    # docs_manager = docs_all[0]
+    # docs_user = docs_all[1]
+    
+    # file_path_manager = download_doc(docs_manager['file'], docs_manager['title'])
+    # file_path_user = download_doc(docs_user['file'], docs_manager['title'])
+    
     #define model LLM : USE MODEL -> llama3.1:8b [4.7 GB]    
     # llm = Ollama(model="llama3.1:8b", temperature=0, base_url="https://382a-34-67-240-41.ngrok-free.app")
     # llm = Ollama(model="llama3.1:8b", temperature=0, base_url="https://903a-34-125-254-184.ngrok-free.app")
-    llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://e816-34-83-196-251.ngrok-free.app")
-    #membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
-    embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
-    #membuat vectorstore dan retriever untuk role user    
-    docs = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\backend_django\\backend_koni\\backend_app\\rag\\Contoh-Draft-Peraturan-Perusahaan.pdf")
-    documents = split_docs(documents=docs, chunk_size=1500, chunk_overlap=300)
-    vectorstore = create_embeddings(documents, embed)
-    retriever = vectorstore.as_retriever()
-
-    #membuat vectorstore dan retriever untuk role admin    
-    docs_admin = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\web\\rag\\NIPS-2017-attention-is-all-you-need-Paper.pdf")
-    documents_admin = split_docs(documents=docs_admin)
-    vectorstore_admin = create_embeddings(documents_admin, embed, storing_path="vectorstore_admin")
-    retriever_admin = vectorstore_admin.as_retriever()
+    llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://3df2-34-83-230-200.ngrok-free.app")
     
-        
+    # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
+    embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
+    
+    # doc_path_manager, doc_path_user = load_downloaded_file()
+    
+    # #membuat vectorstore dan retriever untuk role user    
+    # docs = load_pdf_data(file_path=doc_path_user)
+    # # docs = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\web\\rag\\Contoh-Draft-Peraturan-Perusahaan.pdf")
+    # documents = split_docs(documents=docs, chunk_size=1500, chunk_overlap=300)
+    # vectorstore = create_embeddings(documents, embed)
+    # retriever = vectorstore.as_retriever()
+
+    # #membuat vectorstore dan retriever untuk role admin    
+    # docs_admin = load_pdf_data(file_path=doc_path_manager)
+    # # docs_admin = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\web\\rag\\NIPS-2017-attention-is-all-you-need-Paper.pdf")
+    # documents_admin = split_docs(documents=docs_admin)
+    # vectorstore_admin = create_embeddings(documents_admin, embed, storing_path="vectorstore_admin")
+    # retriever_admin = vectorstore_admin.as_retriever()
+    
+    #membuat retriever
+    retriever = process_embedding(role, embed)
+    st.toast("✅ embedding selesai")    
     #membuat template prompt untuk memberi tahu bahwa terdapat probabilitas 
     #percakapan sebelumnya relevan untuk menjawab pertanyaan terkini (give context for model)
     prompt_context = ChatPromptTemplate.from_messages(
@@ -127,11 +189,11 @@ def init_rag():
     util_context2 = Utils_context(context_chain=context_chain)   
     
     #RAG Chain untuk role admin    
-    rag_chain_admin = (
-            RunnablePassthrough.assign(
-                context= util_context2.contextualization_question | retriever_admin |format_docs
-            ) | qa_prompt | llm
-        )
+    # rag_chain_admin = (
+    #         RunnablePassthrough.assign(
+    #             context= util_context2.contextualization_question | retriever_admin |format_docs
+    #         ) | qa_prompt | llm
+    #     )
         
     #RAG Chain untuk role user    
     rag_chain = (
@@ -145,7 +207,7 @@ def init_rag():
     #dictionary untuk menyimpan tiap rag chain
     rag_dic = {
             "rag_user" : rag_chain,
-            "rag_admin" : rag_chain_admin
+            # "rag_admin" : rag_chain_admin
         }
     return rag_dic
 

@@ -60,7 +60,7 @@ if data_count_feedback != "error":
 
 st.header("Document per Role")    
 for i in data_docs:
-    with st.container(height=300):
+    with st.container(height=320):
         col1, col2 = st.columns(2, gap="small")
         with col1:
             # st.write(f"{i['name']}" )
@@ -71,9 +71,9 @@ for i in data_docs:
             datetime_obj = datetime.strptime(i['tanggal'], "%Y-%m-%dT%H:%M:%S.%fZ")
             # Mengubah ke format tanggal biasa
             formatted_date = datetime_obj.strftime("%Y-%m-%d %H:%M:%S")
-            col2.write(formatted_date)
+            col2.write(f"🕖 terakhir update : {formatted_date}")
         st.write(f"Dok. sekarang : {i['title']}" )
-        file = st.file_uploader("Dokumen", type="pdf",accept_multiple_files=False,key=i['title'])
+        file = st.file_uploader("Dokumen", type="pdf",accept_multiple_files=False,key=i['id'])
 
         # """
         #     upload file sesuai role yang dipilih

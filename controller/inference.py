@@ -3,6 +3,7 @@ import time
 import logging
 import streamlit as st
 
+
 logging.basicConfig(
     level=logging.DEBUG,  # Menentukan level logging
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Menentukan format log
@@ -26,21 +27,21 @@ def inference(rag, input:Prompt):
     role = input.role
     id = input.id
     
+    
     if 'continue_history' in st.session_state:
         chat_history = st.session_state[st.session_state.id_sesi_prev]
     else:
         chat_history = st.session_state[f"chat_history_{st.session_state.session_id}"]     
-    
-    if rag is not None:
+    if rag is None:
+        return "error", 0  
+    else:
+        # rag is not None:
             start_time = time.time()
             respon = ""
-            # logger.debug(f"role : {role} | id_user {id} | cobo_chat_history_{id}")
-            # logger.debug(f"len : {len(st.session_state[f'chat_history_{st.session_state.session_id}'])} | chat_history_{st.session_state.session_id}")
+            
             logger.debug(f"len : {len(chat_history)} | {chat_history}")
-            # logger.debug(f"len : {len(st.session_state[f'chat_history'])} | chat_history")
-
-            if role == 1:
-                respon = rag['rag_admin'].invoke(
+            
+            respon = rag['rag_user'].invoke(
                         {
                             "question": query,
                             # "chat_history": st.session_state[f"chat_history"]
@@ -52,51 +53,76 @@ def inference(rag, input:Prompt):
                 # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
                 #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
                         
-                if len(chat_history) >= 10:
+            if len(chat_history) >= 10:
                     chat_history.pop(0)
-                        
-                # if len(st.session_state[f"chat_history"]) >= 10:
-                #     st.session_state[f"chat_history"].pop(0)
-                else:
-                        
-                    # st.session_state[f"chat_history"].extend(
-                    chat_history.extend(
-                    # st.session_state[f"chat_history_{st.session_state.session_id}"].extend(
-                            [
-                                f"human question : {query}",
-                                f"your answer : {respon}" 
-                            ]
-                        )
-                    # request.session[f"cobo_chat_history_{id}"] = chat_history
             else:
-                respon = rag['rag_user'].invoke(
-                        {
-                            "question": query,
-                            # "chat_history": st.session_state[f"chat_history"]
-                            "chat_history": chat_history
-                            # "chat_history": st.session_state[f"chat_history_{st.session_state.session_id}"]
-                        }
-                    )
-                
-                # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
-                #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
-                
-                if len(chat_history) >= 10:
-                    chat_history.pop(0)        
-                # if len(st.session_state[f"chat_history"]) >= 10:
-                #     st.session_state[f"chat_history"].pop(0)
-                else:
-                    
-                    # st.session_state[f"chat_history"].extend(
+                        
                     chat_history.extend(
-                    # st.session_state[f"chat_history_{st.session_state.session_id}"].extend(
                             [
                                 f"human question : {query}",
                                 f"your answer : {respon}" 
                             ]
                         )
+
+            # if role == "manager":
+            #     respon = rag['rag_admin'].invoke(
+            #             {
+            #                 "question": query,
+            #                 # "chat_history": st.session_state[f"chat_history"]
+            #                 # "chat_history": st.session_state[f"chat_history_{st.session_state.session_id}"]
+            #                 "chat_history": chat_history
+            #             }
+            #         )
+                
+            #     # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
+            #     #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
+                        
+            #     if len(chat_history) >= 10:
+            #         chat_history.pop(0)
+                        
+            #     # if len(st.session_state[f"chat_history"]) >= 10:
+            #     #     st.session_state[f"chat_history"].pop(0)
+            #     else:
+                        
+            #         # st.session_state[f"chat_history"].extend(
+            #         chat_history.extend(
+            #         # st.session_state[f"chat_history_{st.session_state.session_id}"].extend(
+            #                 [
+            #                     f"human question : {query}",
+            #                     f"your answer : {respon}" 
+            #                 ]
+            #             )
+            #         # request.session[f"cobo_chat_history_{id}"] = chat_history
+            # else:
+            #     respon = rag['rag_user'].invoke(
+            #             {
+            #                 "question": query,
+            #                 # "chat_history": st.session_state[f"chat_history"]
+            #                 "chat_history": chat_history
+            #                 # "chat_history": st.session_state[f"chat_history_{st.session_state.session_id}"]
+            #             }
+            #         )
+                
+            #     # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
+            #     #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
+                
+            #     if len(chat_history) >= 10:
+            #         chat_history.pop(0)        
+            #     # if len(st.session_state[f"chat_history"]) >= 10:
+            #     #     st.session_state[f"chat_history"].pop(0)
+            #     else:
+                    
+            #         # st.session_state[f"chat_history"].extend(
+            #         chat_history.extend(
+            #         # st.session_state[f"chat_history_{st.session_state.session_id}"].extend(
+            #                 [
+            #                     f"human question : {query}",
+            #                     f"your answer : {respon}" 
+            #                 ]
+            #             )
                 # request.session[f"cobo_chat_history_{id}"] = chat_history   
             response_time = time.time() - start_time
             logger.debug(f"history : {chat_history}")
             # logger.debug(f"history : {st.session_state[f'chat_history_{st.session_state.session_id}']}")
     return respon.content, response_time
+    

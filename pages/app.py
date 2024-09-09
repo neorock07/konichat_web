@@ -32,6 +32,7 @@ from datetime import datetime
 from functools import partial
 from layout.custom_layout import st_fixed_container
 from controller.auth_controller import logout
+from layout.feedback_layout import feedback_form
 
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
@@ -46,24 +47,33 @@ logger = logging.getLogger(__name__)
 if "session_id" not in st.session_state:
     st.session_state.session_id = uuid.uuid4().hex
     st.session_state[f"chat_history_{st.session_state.session_id}"] = []
-    # st.session_state[f"chat_history"] = []
-    st.session_state.set_fb = {}
 
 if 'isSessionCreated' not in st.session_state:
     st.session_state.isSessionCreated = True
     
-       
 chat_list = None
 session = None
 rag_chain = None
+
+
+       
 # """
 #     inisiasi session baru, jika ke history chat pakai session yg lama.
 #     init_rag -> proses embeddings dijalankan satu kali ketika streamlit di running.
 # """
 if 'user_data' in st.session_state:
     data_login = st.session_state.user_data
-    session = requests.Session()
-    rag_chain = init_rag()
+    # with st.spinner("loading menyiapkan dokumen..."):
+    #     rag_chain = init_rag()
+    if 'rag_init' not in st.session_state:
+        st.session_state.rag_init = True
+        with st.spinner("loading menyiapkan dokumen..."):
+            # rag_chain = init_rag()
+            rag_chain = init_rag(data_login['role'])
+            st.session_state.rag_chain = rag_chain
+        logger.debug(f"RAG SEDANG INIT | {rag_chain.__class__}")
+    else:
+        logger.debug(f"RAG TELAH INIT | {rag_chain.__class__}")        
     chat_history = []
     chat_list = get_session_experimental(id=data_login['id'])
 # """
@@ -83,14 +93,12 @@ def handle_feedback():
         ulasan = dict(st.session_state.fb_k)
         logger.debug(f"key ulasan : {ulasan.keys()}") 
         feedback(ulasan['score'], ulasan['text'], ai_respon, human_query)
-        # if ulasan and 'type' in ulasan:
-        # else:
-        #     st.toast("❌ Review failed")
         logger.debug(f"lha iki coeg {ulasan}")
 
-
-st.title(f"Hi, {data_login['username']}!")
-
+# """
+#     text untuk print username
+# """
+st.title(f":rainbow[Hi, {data_login['username']}!]")
 st.markdown(
     """
     <style>
@@ -110,7 +118,8 @@ AI = "assistant"
 MESSAGES = "messages"
 
 # """
-#     kode untuk layout sidebar profile and button new chat
+#     kode untuk layout sidebar profile and button new chat, 
+#     ketika new chat, hapus semua history chat terkini pada session
 # """
 st.sidebar.markdown(f"<p style='font-size:60px;' >{data_login['username']}</p>", unsafe_allow_html=True)
 st.sidebar.markdown("KoniChat | Chat").caption("KoniChat can make mistakes. Check important info.")
@@ -118,7 +127,10 @@ if st.sidebar.button("New Chat ✒"):
     st.toast("new chat")
     st.query_params['c'] = "automodel"
     st.session_state[MESSAGES].clear()
-    del st.session_state.continue_history
+    del st.session_state.session_id
+    st.session_state.isSessionCreated = False
+    del st.session_state.isSessionCreated
+
     
 st.sidebar.subheader("History Chat")
 st.sidebar.divider()
@@ -138,13 +150,11 @@ if MESSAGES not in st.session_state:
 msg: Message
 for idx, msg in enumerate(st.session_state[MESSAGES]):
     # Use idx to create a unique key for each message widget
-    message(
-        msg.payload, 
-        is_user=True if msg.actor == USER else False, 
-        avatar_style='miniavs', 
-        seed=msg.actor, 
-        key=f"message_{idx}"  # Unique key for each message
-    )
+    if msg.actor == AI:
+        st.chat_message(AI, avatar="assets/fav.png").write(msg.payload)
+    else:
+        st.chat_message(USER, avatar="👩‍🦲").write(msg.payload)
+      
 
 # """
 #     kode untuk load previous chat dan assign ke session
@@ -197,7 +207,12 @@ if len(chat_list) > 0:
 with st.sidebar:
     with st_fixed_container(mode="fixed", position="bottom", border=True, height=80, margin="bottom", key="asdasd"):
             if st.button("Log out 📤", use_container_width=True):
+                st.session_state[MESSAGES].clear()
+                del st.session_state.session_id
+                st.session_state.isSessionCreated = False
+                del st.session_state.isSessionCreated
                 logout()
+                st.rerun()
                    
     
 # """
@@ -207,10 +222,12 @@ if prompt:
     
     human_query = prompt
     st.session_state[MESSAGES].append(Message(actor=USER, payload=prompt))
-    message(prompt, is_user= True, avatar_style='personas', seed=USER)
+    # message(prompt, is_user= True, avatar_style='personas', seed=USER)
+    st.chat_message(USER, avatar="👩‍🦲").write(prompt)
     
     with st.spinner("KoniChat sedang mengetik..."):
-        response, time_respon = inference(rag_chain, Prompt(query=human_query, role=data_login['role'], id=data_login['id']))
+        response, time_respon = inference(st.session_state.rag_chain, Prompt(query=human_query, role=data_login['name_role'], id=data_login['id']))
+        # response, time_respon = inference(rag_chain, Prompt(query=human_query, role=data_login['role'], id=data_login['id']))
         ai_respon = response
         #tambah ke session messages
         st.session_state[MESSAGES].append(Message(actor=AI, payload=response))
@@ -261,6 +278,7 @@ if prompt:
         # """
         #     form feedback akan tampil setiap ai selesai merespon
         # """
+        # feedback_form()
         with st.form('form'):
             feedbck = streamlit_feedback(feedback_type="thumbs",
                                 optional_text_label="Berikan ulasanmu!", 

@@ -1,5 +1,8 @@
+from flask import request
 import requests
 import streamlit as st
+from pathlib import Path
+import os
 
 def upload_document(file, id_role,):
     # URL endpoint Django untuk upload file
@@ -90,4 +93,44 @@ def get_all_docs():
                 st.toast("❌ Couldn't get Docs")
                 return "error"    
     except Exception as e:
-                return f"error | {e}"    
+                return f"error | {e}"  
+
+# """
+#     kode utuk mendapatkan dokumen by id_role user;
+# """
+def get_by_id_docs(id_role):    
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/doc/id'
+    data = {
+                'id_role' : id_role
+            }    
+    try:
+        # Melakukan POST request ke endpoint
+        response = requests.get(url, data=data)
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+                st.toast("✔️ Got Docs")
+                return response.json()
+        else:
+                st.toast("❌ Couldn't get Docs")
+                return "error"    
+    except Exception as e:
+                st.toast("❌ Couldn't get Docs | try refresh page!")
+                st.warning(f"Message : {e}")
+                st.stop()
+                # return f"error | {e}"  
+            
+def download_doc(url, file_name):
+    response = requests.get(url)
+    file_path = Path(file_name)
+    with open(file_path, 'wb') as f:
+        f.write(response.content)
+    return file_path
+        
+                
+            
+            
+            
+              
