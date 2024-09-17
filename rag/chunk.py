@@ -1,5 +1,5 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
+from langchain.text_splitter import SpacyTextSplitter
 # """
     #     kode untuk chunk (memotong dokumen menjadi bagian-bagian yang lebih kecil)
     #     params:
@@ -9,7 +9,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
     #     returns:
     #         chunks (List[document]): objek hasil split dokumen    
     # """
-def split_docs(documents, chunk_size=1000, chunk_overlap=20):
+def split_docs(documents, chunk_size, chunk_overlap):
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size, 
             chunk_overlap=chunk_overlap

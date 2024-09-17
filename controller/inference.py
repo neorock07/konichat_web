@@ -27,7 +27,10 @@ def inference(rag, input:Prompt):
     role = input.role
     id = input.id
     
-    
+    # """
+    #     cek apakah melanjutkan previous chat, atau mulai baru;
+    #     jika lanjut, gunakan sesi previous, jika baru gunakan id session baru
+    # """
     if 'continue_history' in st.session_state:
         chat_history = st.session_state[st.session_state.id_sesi_prev]
     else:
@@ -35,94 +38,39 @@ def inference(rag, input:Prompt):
     if rag is None:
         return "error", 0  
     else:
-        # rag is not None:
             start_time = time.time()
             respon = ""
             
             logger.debug(f"len : {len(chat_history)} | {chat_history}")
+            doc_retrieve = rag['retriever'].get_relevant_documents(query)
             
             respon = rag['rag_user'].invoke(
                         {
                             "question": query,
-                            # "chat_history": st.session_state[f"chat_history"]
-                            # "chat_history": st.session_state[f"chat_history_{st.session_state.session_id}"]
                             "chat_history": chat_history
                         }
                     )
-                
-                # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
-                #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
-                        
+                     
             if len(chat_history) >= 10:
                     chat_history.pop(0)
             else:
-                        
+                    # """
+                    #     tambahkan percakapan ke history model
+                    # """    
                     chat_history.extend(
                             [
                                 f"human question : {query}",
                                 f"your answer : {respon}" 
                             ]
                         )
-
-            # if role == "manager":
-            #     respon = rag['rag_admin'].invoke(
-            #             {
-            #                 "question": query,
-            #                 # "chat_history": st.session_state[f"chat_history"]
-            #                 # "chat_history": st.session_state[f"chat_history_{st.session_state.session_id}"]
-            #                 "chat_history": chat_history
-            #             }
-            #         )
-                
-            #     # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
-            #     #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
-                        
-            #     if len(chat_history) >= 10:
-            #         chat_history.pop(0)
-                        
-            #     # if len(st.session_state[f"chat_history"]) >= 10:
-            #     #     st.session_state[f"chat_history"].pop(0)
-            #     else:
-                        
-            #         # st.session_state[f"chat_history"].extend(
-            #         chat_history.extend(
-            #         # st.session_state[f"chat_history_{st.session_state.session_id}"].extend(
-            #                 [
-            #                     f"human question : {query}",
-            #                     f"your answer : {respon}" 
-            #                 ]
-            #             )
-            #         # request.session[f"cobo_chat_history_{id}"] = chat_history
-            # else:
-            #     respon = rag['rag_user'].invoke(
-            #             {
-            #                 "question": query,
-            #                 # "chat_history": st.session_state[f"chat_history"]
-            #                 "chat_history": chat_history
-            #                 # "chat_history": st.session_state[f"chat_history_{st.session_state.session_id}"]
-            #             }
-            #         )
-                
-            #     # if len(st.session_state[f"chat_history_{st.session_state.session_id}"]) >= 10:
-            #     #     st.session_state[f"chat_history_{st.session_state.session_id}"].pop(0)
-                
-            #     if len(chat_history) >= 10:
-            #         chat_history.pop(0)        
-            #     # if len(st.session_state[f"chat_history"]) >= 10:
-            #     #     st.session_state[f"chat_history"].pop(0)
-            #     else:
-                    
-            #         # st.session_state[f"chat_history"].extend(
-            #         chat_history.extend(
-            #         # st.session_state[f"chat_history_{st.session_state.session_id}"].extend(
-            #                 [
-            #                     f"human question : {query}",
-            #                     f"your answer : {respon}" 
-            #                 ]
-            #             )
-                # request.session[f"cobo_chat_history_{id}"] = chat_history   
+                    print("no memory")
+            # """
+            #     hitung lama respon model 
+            # """           
             response_time = time.time() - start_time
             logger.debug(f"history : {chat_history}")
-            # logger.debug(f"history : {st.session_state[f'chat_history_{st.session_state.session_id}']}")
-    return respon.content, response_time
+            logger.debug(f"len {len(doc_retrieve)} | dokumen ret : {doc_retrieve[0].page_content}")
+            logger.debug(f"source document : {respon}")
+    return respon.content,  doc_retrieve[0].page_content, response_time
+    # return respon.content, response_time
     

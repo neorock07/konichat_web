@@ -70,7 +70,7 @@ def update_document(file, id_role, tanggal):
             return response.json()
         else:
             print(f"Gagal upload file. Status code: {response.status_code}")
-            print(response.text)
+            # print(response.text)
             st.toast("❌ failed update file!")
             return response.json()      
     else:

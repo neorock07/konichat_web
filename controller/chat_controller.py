@@ -34,11 +34,21 @@ MESSAGES = "messages"
         None    
 """
 
-def generate_response(msg:Message, time_respon:str):
+@st.dialog("Sumber Dokumen")
+def source_doc(item):
+    st.write(f"{item}")
+    if st.button("Submit"):
+        st.rerun()
+
+def generate_response(msg:Message, sumber:str ,time_respon:str):
     typing_area = st.empty()
     # Kecepatan mengetik dalam detik per karakter
     typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
-    
+    st.divider()
+    # st.text("Sumber Dokumen")
+    with st.expander("Sumber Dokumen"):
+        st.write(sumber)
+    # st.info(sumber)
     # """
     #     button copy message & container waktu response model
     # """

@@ -1,13 +1,18 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-
+from langchain.chains.hyde.base import HypotheticalDocumentEmbedder
+from langchain.retrievers import BM25Retriever, EnsembleRetriever
+from langchain_core.runnables import ConfigurableField, RunnableLambda
 
  # """
     #     Kode untuk memuat model Embedding yang akan digunakan untuk 
     #     mengubah data hasil chunking/splitting menjadi dimensi embeddings (ruang vector)
 
     #     params:
-    #         model_path: 
+    #         model_path (str): path model encoder embedding
+    #         normalize_embedding (bool): default True 
+    #     returns:
+    #           objek HuggingFaceEmbeddings
     # """
 
 def load_embedding_model(model_path, normalize_embedding=True):
@@ -31,8 +36,29 @@ def load_embedding_model(model_path, normalize_embedding=True):
     #         vectorstore: hasil embeddings berupa data vector documents    
     # """    
         
-def create_embeddings(chunks, embedding_model, storing_path="vectorstore"):
-        vectorstore = FAISS.from_documents(chunks, embedding_model)
-        vectorstore.save_local(storing_path)
-        print(vectorstore)
-        return vectorstore        
+def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
+    hyde = HypotheticalDocumentEmbedder.from_llm(llm=llm, base_embeddings=embedding_model, prompt_key="web_search")
+    hyde_retriever = FAISS.from_documents(chunks, hyde)
+    
+    bm25 = BM25Retriever.from_documents(chunks)
+    bm25.k = 5
+    
+    vector_retriver = FAISS.from_documents(chunks, embedding_model)
+
+    # Menyimpan retriever ke path lokal
+    hyde_retriever.save_local(storing_path)
+    # Mengonfigurasi hyde_retriever dengan search_kwargs
+    hyde_retriever = hyde_retriever.as_retriever(search_kwargs={"k": 2})
+    
+    
+    # Membungkus retriever sebagai Runnable
+    retrievers = [
+        RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  # Membungkus bm25 retriever dalam Runnable
+        # vector_retriver.as_retriever(),
+        RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q))  # Membungkus hyde_retriever dalam Runnable
+    ]
+    
+    # Menggabungkan retriever menjadi EnsembleRetriever dengan bobot
+    vectorstore = EnsembleRetriever(retrievers=retrievers, weights=[0.5, 0.5])
+    
+    return vectorstore   
