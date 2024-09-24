@@ -40,14 +40,32 @@ def source_doc(item):
     if st.button("Submit"):
         st.rerun()
 
-def generate_response(msg:Message, sumber:str ,time_respon:str):
+def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
+    # typing_area = st.empty()
+    # # Kecepatan mengetik dalam detik per karakter
+    # typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
     typing_area = st.empty()
-    # Kecepatan mengetik dalam detik per karakter
+    typing_speed = 0.01  # Kecepatan mengetik dalam detik per karakter
+    
+    displayed_text = ""
+    for char in msg.payload:
+        displayed_text += char
+        typing_area.write(displayed_text)
+        time.sleep(typing_speed)
+    
     typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
+    
     st.divider()
+    sumber_dc = ""
     # st.text("Sumber Dokumen")
     with st.expander("Sumber Dokumen"):
-        st.write(sumber)
+        for i in sumber:
+            sumber_dc += i.page_content
+        st.write(sumber_dc)
+    
+    with st.expander("Sumber Dokumen Final"):
+        st.write(final_sumber)
+    
     # st.info(sumber)
     # """
     #     button copy message & container waktu response model
@@ -127,7 +145,7 @@ def get_session_experimental(id:str):
         if response.status_code == 200:
                 # Mengambil respons JSON
             st.toast("✅ Berhasil memulihkan chat")
-            logger.debug(f"sesi : {response.json()}")
+            # logger.debug(f"sesi : {response.json()}")
             return response.json()['data']
         else:
             st.toast("❌ Gagal memulihkan chat")

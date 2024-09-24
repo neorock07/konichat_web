@@ -41,24 +41,25 @@ def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
     hyde_retriever = FAISS.from_documents(chunks, hyde)
     
     bm25 = BM25Retriever.from_documents(chunks)
-    bm25.k = 5
+    bm25.k = 10
     
     vector_retriver = FAISS.from_documents(chunks, embedding_model)
 
     # Menyimpan retriever ke path lokal
     hyde_retriever.save_local(storing_path)
-    # Mengonfigurasi hyde_retriever dengan search_kwargs
-    hyde_retriever = hyde_retriever.as_retriever(search_kwargs={"k": 2})
     
+    #buat retriever hyde dan vector retriever
+    vector_retriver = vector_retriver.as_retriever(search_kwargs={"k": 10})
+    hyde_retriever = hyde_retriever.as_retriever(search_kwargs={"k": 10})
     
-    # Membungkus retriever sebagai Runnable
+    # wrap retriever sebagai Runnable
     retrievers = [
-        RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  # Membungkus bm25 retriever dalam Runnable
-        # vector_retriver.as_retriever(),
-        RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q))  # Membungkus hyde_retriever dalam Runnable
+        # RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q)),  
+        RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  
+        vector_retriver
     ]
     
     # Menggabungkan retriever menjadi EnsembleRetriever dengan bobot
-    vectorstore = EnsembleRetriever(retrievers=retrievers, weights=[0.5, 0.5])
+    vectorstore = EnsembleRetriever(retrievers=retrievers, weights=[0.3,0.7])
     
     return vectorstore   

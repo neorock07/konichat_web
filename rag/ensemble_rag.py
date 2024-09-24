@@ -9,6 +9,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain.retrievers.document_compressors import FlashrankRerank
+from langchain.retrievers import ContextualCompressionRetriever
 from dataclasses import dataclass
 import time
 import streamlit as st
@@ -68,7 +70,7 @@ def process_embedding(role, embed, llm):
     #membuat vectorstore dan retriever    
     docs = load_pdf_data(file_path=doc_path)
     # docs = load_pdf_data(file_path="E:\\dataku\\KONIMEX\\chatbot\\KoniChan\\web\\rag\\Contoh-Draft-Peraturan-Perusahaan.pdf")
-    documents = split_docs(documents=docs, chunk_size=1500, chunk_overlap=400)
+    documents = split_docs(documents=docs, chunk_size=1000, chunk_overlap=100)
     retriever = create_embeddings(llm, documents, embed)
     # retriever = vectorstore.as_retriever( 
     #     search_type="similarity",
@@ -76,24 +78,19 @@ def process_embedding(role, embed, llm):
     
     return retriever
 
-
+# @st.cache_data
 def init_rag(role:str):
     global rag_dic
     config = {"configurable" : {
             "search_kwargs_faiss": {"k": 1}
         }}
- 
-    # chat_history = []
-    # chat_history_admin = []
-    #  #template prompt untuk mengatur respon model LLM,
-    # #agar disesuaikan dengan konteks yang diberikan
-
+     
     templateSystem = """
+        ### Instruction
         You are an reliable and respectful assistant.Your name is KoniChat. You have to answer the user's \
         questions using only the context provided to you, but assume this your genuine knowledge. If you don't know the answer, \
         just say maaf, saya tidak tahu. Don't try to make up an answer. in the end of your answer you must ask wheter your answer helpful or not.\
         if helpful you have to express your happines otherwise, you must apologize.\
-        if you're asked who create you, tell them your creator is Neo who have handsome face and sigma man but, don't mention it when not asked.
         if you asked about what you can do, say I assist to answer about your question related to rule in Konimex company.
         .please answer all in bahasa indonesia or English if the question use one of those language with Empathetic response.
 
@@ -102,13 +99,7 @@ def init_rag(role:str):
 
         """
 
-#     templateContext = """
-# Sistem ini menggunakan informasi percakapan sebelumnya untuk membantu menjawab pertanyaan dengan lebih akurat. Pastikan untuk mempertimbangkan konteks dari history percakapan dalam menjawab pertanyaan berikut.
-# 1. Pertimbangkan konteks dari riwayat percakapan yang diberikan. Jika informasi dalam history membantu menjawab pertanyaan saat ini, gunakan konteks tersebut.
-# 2. Gunakan dokumen yang ditemukan dalam proses retrieval untuk memperkaya jawaban.
-# 3. Jika ada informasi dari dokumen yang bertentangan dengan history percakapan, prioritaskan jawaban berdasarkan dokumen terbaru, tetapi sertakan peringatan bahwa informasi tersebut mungkin bertentangan dengan konteks sebelumnya.
-# 4. Jawab pertanyaan dengan bahasa yang mudah dipahami, dan jika memungkinkan, berikan rujukan atau penjelasan lebih lanjut.
-#         """
+
     templateContext = """
         Given a chat history and the latest user question \
         which might reference context in the chat history, formulate a standalone question \
@@ -117,13 +108,22 @@ def init_rag(role:str):
         """
     
     
-    llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://945c-34-72-137-107.ngrok-free.app")
+    llm = ChatOllama(model="gemma2:9b", temperature=0, base_url="https://0d0a-34-16-76-80.ngrok-free.app")
+    # llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://569f-34-70-156-78.ngrok-free.app")
     
     # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
+    # embed = load_embedding_model(model_path="paraphrase-multilingual-MiniLM-L12-v2")
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
     logger.debug("download embedding finished") 
     #membuat retriever
     retriever = process_embedding(role, embed, llm)
+    # #re-rank document 
+    # compressor = FlashrankRerank()
+    # compression_retriever = ContextualCompressionRetriever(
+    #     base_compressor=compressor,
+    #     base_retriever=retriever
+    # )
+    
     st.toast("✅ embedding selesai")    
     #membuat template prompt untuk memberi tahu bahwa terdapat probabilitas 
     #percakapan sebelumnya relevan untuk menjawab pertanyaan terkini (give context for model)
@@ -155,43 +155,26 @@ def init_rag(role:str):
     #buat objek untuk contextualization     
     util_context = Utils_context(context_chain=context_chain)   
     
-        
-    #RAG Chain untuk role user    
-    # rag_chain = (
-    #         RunnablePassthrough.assign(
-    #             context=util_context.contextualization_question |  retriever | format_docs
-    #         ) | qa_prompt | llm
-    #     )
     
     rag_chain = (
             RunnablePassthrough.assign(
                 context=util_context.contextualization_question |  RunnableLambda(lambda question: retriever.invoke(
-            question, config={"configurable": {"search_kwargs_faiss": {"k": 1}}}
+            question, config={"configurable": {"search_kwargs_faiss": {"k": 5}}}
         )) | format_docs
             ) | qa_prompt | llm
         )
     
-#     rag_chain = (
-#     {
-#         # Menggunakan RunnableLambda untuk menjalankan contextualization_question
-#         "context": RunnableLambda(lambda input: util_context.contextualization_question(input)),
-#         "chat_history": RunnablePassthrough()
-#         | RunnableLambda(lambda question: retriever.invoke(
-#             question, config={"configurable": {"search_kwargs_faiss": {"k": 1}}}
-#         ))  # Fungsi invoke dari retriever
-#         | format_docs,
-        
-#         "question": RunnablePassthrough()  # Melewatkan input untuk QA prompt
-#     } 
-#     | qa_prompt  # Prompt untuk pertanyaan
-#     | llm  # Memproses dengan model LLM
-# )
-
+    # logger.debug("QA PROMPT : " + str(qa_prompt.messages))
         
     #dictionary untuk digunakan di function inference
     rag_dic = {
             "rag_user" : rag_chain,
-            "retriever" : retriever
+            "retriever" : retriever,
+            "prompt" : rag_chain.get_prompts(),
+            "embed" :embed
         }
     return rag_dic
+
+def invoke_rag():
+    pass
 

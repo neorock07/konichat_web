@@ -224,17 +224,17 @@ if prompt:
     human_query = prompt
     st.session_state[MESSAGES].append(Message(actor=USER, payload=prompt))
     # message(prompt, is_user= True, avatar_style='personas', seed=USER)
-    st.chat_message(USER, avatar="👩‍🦲").write(prompt)
+    st.chat_message(USER, avatar="📌").write(prompt)
     
     with st.spinner("KoniChat sedang mengetik..."):
-        response, source_doc,  time_respon = inference(st.session_state.rag_chain, Prompt(query=human_query, role=data_login['name_role'], id=data_login['id']))
+        response, source_doc, final_doc,  time_respon = inference(st.session_state.rag_chain, Prompt(query=human_query, role=data_login['name_role'], id=data_login['id']))
         # response, time_respon = inference(rag_chain, Prompt(query=human_query, role=data_login['role'], id=data_login['id']))
         ai_respon = response
         #tambah ke session messages
         st.session_state[MESSAGES].append(Message(actor=AI, payload=response))
         
         #tampilkan ke chatbox
-        generate_response(Message(actor=AI, payload=response), source_doc,  time_respon=time_respon)
+        generate_response(Message(actor=AI, payload=response), source_doc, final_doc, time_respon=time_respon)
         today = datetime.today()
         formatted_time = today.strftime("%Y-%m-%d %H:%M:%S")
         
