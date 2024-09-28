@@ -40,6 +40,16 @@ def source_doc(item):
     if st.button("Submit"):
         st.rerun()
 
+def stream_data(text):
+    for word in text.split(" "):
+        yield word + " "
+        time.sleep(0.02)
+
+    for word in text.split(" "):
+        yield word + " "
+        time.sleep(0.02)
+
+
 def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
     # typing_area = st.empty()
     # # Kecepatan mengetik dalam detik per karakter
@@ -54,6 +64,7 @@ def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
         time.sleep(typing_speed)
     
     typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
+    # st.write_stream(stream_data)
     
     st.divider()
     sumber_dc = ""

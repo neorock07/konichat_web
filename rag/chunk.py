@@ -1,5 +1,6 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.text_splitter import SpacyTextSplitter
+import streamlit as st
 # """
     #     kode untuk chunk (memotong dokumen menjadi bagian-bagian yang lebih kecil)
     #     params:
@@ -9,10 +10,11 @@ from langchain.text_splitter import SpacyTextSplitter
     #     returns:
     #         chunks (List[document]): objek hasil split dokumen    
     # """
-def split_docs(documents, chunk_size, chunk_overlap):
+
+def split_docs(_documents, _chunk_size, _chunk_overlap):
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size, 
-            chunk_overlap=chunk_overlap
+            chunk_size=_chunk_size, 
+            chunk_overlap=_chunk_overlap
         )
-        chunks = text_splitter.split_documents(documents=documents)
+        chunks = text_splitter.split_documents(documents=_documents)
         return chunks

@@ -1,5 +1,5 @@
 from langchain_community.document_loaders import PyMuPDFLoader
- 
+import streamlit as st 
  # """
     #  kode untuk load pdf data
     #  params:
@@ -7,6 +7,7 @@ from langchain_community.document_loaders import PyMuPDFLoader
     #  returns:
     #     docs (List[document]): objek loaded yang sudah termuat      
     # """
+@st.cache_data
 def load_pdf_data(file_path):
         loader = PyMuPDFLoader(file_path=file_path)
         docs = loader.load()

@@ -81,9 +81,11 @@ def inference(rag, input:Prompt):
             final_doc = ensemble_retrieve.get_relevant_documents(query)
             final_sumber_doc = ""
             for i in final_doc:
-                # pre_word = str(i.page_content).replace('•', '\n')
+                pre_word = str(i.page_content).replace('•', '\n')
+                pre_word = str(i.page_content).replace('', '\n')
+
                 # post_word = re.sub(r'\d+\.\d+\.\d+', '\n', pre_word)
-                final_sumber_doc += f"{i.page_content}\n"
+                final_sumber_doc += f"{pre_word}\n"
             
             # """
             #     kirim context beserta query ke llm

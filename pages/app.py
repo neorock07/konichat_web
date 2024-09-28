@@ -1,38 +1,23 @@
-from turtle import onclick, width
-from more_itertools import substrings
 import streamlit as st
-from dataclasses import dataclass
-import time
-import requests
-from streamlit_lottie import st_lottie 
 from streamlit_feedback import streamlit_feedback
-import random
-from annotated_text import annotated_text
 import logging
 from datetime import datetime
-from navigation import make_sidebar
-from rag.ensemble_rag import init_rag
+from rag.ensemble_rag import init_rag, chunked_doc, invoke_rag
 import uuid
-from streamlit_chat import message
-import clipboard
 from controller.feedback_method import feedback
 from modelMsg.message_model import Message
 from modelMsg.prompt_model import Prompt
 from controller.inference import inference
-from controller.copytext import on_copy_click
 from controller.chat_controller import generate_response
 from controller.chat_controller import save_chat_experimental
 from controller.chat_controller import save_session_experimental
-from controller.chat_controller import get_chat_experimental
 from controller.chat_controller import get_session_experimental
 from controller.chat_controller import get_conversation_by_id
 from modelMsg.chat_model import ChatModel
 from modelMsg.session_model import SessionModel
 from datetime import datetime
-from functools import partial
 from layout.custom_layout import st_fixed_container
 from controller.auth_controller import logout
-from layout.feedback_layout import feedback_form
 
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
@@ -43,6 +28,8 @@ logging.basicConfig(
 
 # Membuat logger
 logger = logging.getLogger(__name__)
+# chunked = chunked_doc()
+
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = uuid.uuid4().hex
@@ -54,7 +41,8 @@ if 'isSessionCreated' not in st.session_state:
 chat_list = None
 session = None
 rag_chain = None
-
+def_rag = None
+def_rag = init_rag()
 
        
 # """
@@ -67,9 +55,19 @@ if 'user_data' in st.session_state:
     #     rag_chain = init_rag()
     if 'rag_init' not in st.session_state:
         st.session_state.rag_init = True
-        with st.spinner("loading menyiapkan dokumen..."):
+        with st.spinner("membuat sesi baru..."):
             # rag_chain = init_rag()
-            rag_chain = init_rag(data_login['role'])
+            # rag_chain = init_rag(data_login['name_role'], chunked)
+           
+            rag_chain = invoke_rag(
+                role=data_login['name_role'],
+                chunked=def_rag['chunked'],
+                context_question=def_rag['util_context'], 
+                qa_prompt=def_rag['qa_prompt'],
+                llm=def_rag['llm'], 
+                embed=def_rag['embed']
+                )
+            
             st.session_state.rag_chain = rag_chain
         logger.debug(f"RAG SEDANG INIT | {rag_chain.__class__}")
     else:

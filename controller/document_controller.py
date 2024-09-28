@@ -87,10 +87,10 @@ def get_all_docs():
          # Memeriksa apakah request berhasil
         if response.status_code == 200:
                 # Mengambil respons JSON
-                st.toast("✔️ Got Docs")
+                # st.toast("✔️ Got Docs")
                 return response.json()
         else:
-                st.toast("❌ Couldn't get Docs")
+                # st.toast("❌ Couldn't get Docs")
                 return "error"    
     except Exception as e:
                 return f"error | {e}"  
