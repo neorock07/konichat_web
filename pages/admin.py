@@ -62,15 +62,19 @@ if data_count_feedback != "error":
 
 st.divider() 
 st.header("Document Setting")    
-###coba----
+
+# """
+#     grouping data documents per role
+#     e.g : {'manager':[..., ...], ...}
+# """
+
 group_doc = {}
 for i in data_docs:
     name = i['name']
     if name not in group_doc:
         group_doc[name] = []
     group_doc[name].append(i)
-    
-logging.debug(f"group_doc : {group_doc}")        
+            
 
 file_upload_update = {}    
 roles = ['--pilih--']
@@ -82,13 +86,15 @@ docs_id = None
 with st.container(height=120):
     selected_role = st.selectbox("Role", options=roles)
 
-with st.container(height=120):
+with st.container(height=180):
     if selected_role is not '--pilih--':
         docs_title = [i['title'] for i in group_doc[selected_role]]
         docs_id = [i for i in group_doc[selected_role]]
-        selected_doc = st.selectbox("Dokumen", options=docs_title)
-        selected_index = docs_title.index(selected_doc)
-    # if selected_role is not "--pilih--":
+        selected_doc = st.selectbox("Dokumen", options=docs_title, index=None, placeholder="search doc...")
+        if selected_doc is not None:
+            selected_index = docs_title.index(selected_doc)
+        else:
+            selected_role = None
     else:
         st.write("Dokumen")
         st.warning("Pilih role yang valid!")    

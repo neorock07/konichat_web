@@ -39,32 +39,32 @@ def source_doc(item):
     st.write(f"{item}")
     if st.button("Submit"):
         st.rerun()
+    
 
-def stream_data(text):
-    for word in text.split(" "):
-        yield word + " "
-        time.sleep(0.02)
-
-    for word in text.split(" "):
-        yield word + " "
-        time.sleep(0.02)
-
+def generator_to_str(nested_generator) -> str:
+    result = []
+    for generator in nested_generator:  # Iterate over the outer generator
+        for item in generator:  # Iterate over each inner generator
+            result.append(str(item.content))  # Convert each item to string and append
+    return ''.join(result) 
 
 def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
-    # typing_area = st.empty()
-    # # Kecepatan mengetik dalam detik per karakter
-    # typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
+    # token_full = ""
     typing_area = st.empty()
-    typing_speed = 0.01  # Kecepatan mengetik dalam detik per karakter
+    # typing_speed = 0.01  # Kecepatan mengetik dalam detik per karakter
+    # displayed_text = ""
+    # for char in msg.payload:
+    #     displayed_text += char
+    #     typing_area.write(displayed_text)
+    #     time.sleep(typing_speed)
+    # with typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
     
-    displayed_text = ""
-    for char in msg.payload:
-        displayed_text += char
-        typing_area.write(displayed_text)
-        time.sleep(typing_speed)
-    
-    typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
-    # st.write_stream(stream_data)
+    with typing_area.chat_message(msg.actor, avatar="assets/fav.png"):
+        token_full = typing_area.write_stream(msg.payload)
+    # token_full = generator_to_str(token_full)    
+    # st.session_state.messages_stm.append(Message(actor=AI, payload=token_full))    
+    # st.session_state[MESSAGES].append(Message(actor=AI, payload=token_full)) 
+    # token_full = generator_to_str(token_full)
     
     st.divider()
     sumber_dc = ""
@@ -85,12 +85,14 @@ def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
     annotated_text(
     ("waktu respon",f"{time_respon:.2f} s"),
     )
+    return token_full
 
 def save_chat_experimental(chat:ChatModel):
     ai_respon = chat.ai_respon
     human_query = chat.human_query
     tanggal = chat.tanggal
     id_session = chat.id_session
+    
     
     # Data yang akan dikirim ke endpoint
     data = {

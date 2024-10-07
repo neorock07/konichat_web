@@ -19,6 +19,7 @@ from datetime import datetime
 from layout.custom_layout import st_fixed_container
 from controller.auth_controller import logout
 
+
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
 logging.basicConfig(
@@ -94,6 +95,21 @@ def handle_feedback():
         logger.debug(f"lha iki coeg {ulasan}")
 
 # """
+#     untuk mengubah object `generator` stream token, 
+#     menjadi full string;
+#     params:
+#         nested_generator (generator) : Generator[Any] 
+#     returns
+#         str;
+# """
+async def generator_to_str(nested_generator) -> str:
+    result = []
+    for generator in nested_generator:  # Iterate over the outer generator
+        for item in generator:  # Iterate over each inner generator
+            result.append(str(item.content))  # Convert each item to string and append
+    return ''.join(result) 
+
+# """
 #     text untuk print username
 # """
 st.title(f":rainbow[Hi, {data_login['username']}!]")
@@ -138,21 +154,21 @@ st.sidebar.divider()
 prompt: str = st.chat_input("chat disini!")
 
 
-
 if 'run_id' not in st.session_state:
     st.session_state.run_id = uuid.uuid4().hex
 
 if MESSAGES not in st.session_state:
     st.session_state[MESSAGES] = [Message(actor=AI, payload="Halo👋, saya KoniChat ada yang bisa saya bantu ?")]
-    
+
+if "message_ai" not in st.session_state:
+    st.session_state.message_ai = []
+        
 msg: Message
 for idx, msg in enumerate(st.session_state[MESSAGES]):
-    # Use idx to create a unique key for each message widget
     if msg.actor == AI:
         st.chat_message(AI, avatar="assets/fav.png").write(msg.payload)
     else:
-        st.chat_message(USER, avatar="👩‍🦲").write(msg.payload)
-      
+        st.chat_message(USER, avatar="📌").write(msg.payload)
 
 # """
 #     kode untuk load previous chat dan assign ke session
@@ -221,20 +237,36 @@ if prompt:
     
     human_query = prompt
     st.session_state[MESSAGES].append(Message(actor=USER, payload=prompt))
-    # message(prompt, is_user= True, avatar_style='personas', seed=USER)
     st.chat_message(USER, avatar="📌").write(prompt)
     
     with st.spinner("KoniChat sedang mengetik..."):
-        response, source_doc, final_doc,  time_respon = inference(st.session_state.rag_chain, Prompt(query=human_query, role=data_login['name_role'], id=data_login['id']))
-        # response, time_respon = inference(rag_chain, Prompt(query=human_query, role=data_login['role'], id=data_login['id']))
-        ai_respon = response
-        #tambah ke session messages
-        st.session_state[MESSAGES].append(Message(actor=AI, payload=response))
         
-        #tampilkan ke chatbox
-        generate_response(Message(actor=AI, payload=response), source_doc, final_doc, time_respon=time_respon)
+        # """
+        #     tampung setiap return dari inference.py
+        # """
+        
+        response, source_doc, final_doc,  time_respon = inference(st.session_state.rag_chain, Prompt(query=human_query, role=data_login['name_role'], id=data_login['id']))
+        
+        # """
+        #     tampilkan hasil respon Ai ke widget UI (token per token);
+        #     agar mendapatkan respon lebih cepat < 5 detik;
+        #     karena tidak menunggu jawaban full;
+        # """
+            
+        ai_respon = generate_response(Message(actor=AI, payload=response), source_doc, final_doc, time_respon=time_respon)
         today = datetime.today()
         formatted_time = today.strftime("%Y-%m-%d %H:%M:%S")
+            
+        # """
+        # menggabungkan tiap token menjadi satu string;
+        #   e.g : 'H', 'a', 'l' => 'Hallo';
+        # lalu simpan ke session agar tetap ada ketika di-render ulang;
+        # """ 
+        
+        ai_m = ''
+        for i in st.session_state.message_ai:
+            ai_m += i.content 
+        st.session_state[MESSAGES].append(Message(actor=AI, payload=ai_m))
         
         # """
         #     cek sesi apakah sudah dibuat dan apakah sudah de-aktif,
@@ -254,20 +286,26 @@ if prompt:
             st.session_state.isSessionCreated = False
                     
         # """
-        #     simpan data setiap kali percakapan
+        #     simpan data setiap kali percakapan, 
+        #     dan hapus jawaban AI dari session sementara.
         # """
         if id_session_history is None:
             save_chat_experimental(ChatModel(
-                ai_respon=response,
+                ai_respon=ai_m,
+                # ai_respon=response,
                 human_query=prompt,
                 tanggal=formatted_time,
                 id_session=f"chat_history_{st.session_state.session_id}"))
+            st.session_state.message_ai.clear()
         else:
             save_chat_experimental(ChatModel(
-                ai_respon=response,
+                ai_respon=ai_m,
+                # ai_respon=response,
                 human_query=prompt,
                 tanggal=formatted_time,
                 id_session=id_session_history))
+            st.session_state.message_ai.clear()
+            
         # """
         #     get new history chat dari percakapan terkini
         # """        
