@@ -81,18 +81,29 @@ def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
     # """
     #     button copy message & container waktu response model
     # """
-    st.button("📄", on_click=on_copy_click, args=(msg.payload, )) if msg.actor == AI else None
+    # st.button("📄", on_click=on_copy_click, args=(msg.payload, )) if msg.actor == AI else None
     annotated_text(
     ("waktu respon",f"{time_respon:.2f} s"),
     )
     return token_full
+
+# """
+#     fungsi untuk menyimpan pasangan chat human-Ai;
+#     e.g: [{'human':'human answer..', 'Ai':'Ai response...'}];
+#     params:
+#         chat (ChatModel): objek ChatModel(ai_respon:str,
+#                                 human_query:str,
+#                                 tanggal:str,
+#                                 id_session:str)
+#     returns:
+#         void;                            
+# """
 
 def save_chat_experimental(chat:ChatModel):
     ai_respon = chat.ai_respon
     human_query = chat.human_query
     tanggal = chat.tanggal
     id_session = chat.id_session
-    
     
     # Data yang akan dikirim ke endpoint
     data = {
@@ -119,6 +130,14 @@ def save_chat_experimental(chat:ChatModel):
     except Exception as e:
            logging.exception(e)
 
+# """
+#     fungsi untuk medapatkan history chat menurut id_session;
+#     params:
+#         id (str): id_session
+#     returns:
+#         response (List[str]): list chat human dan Ai    
+# """
+
 def get_chat_experimental(id:str):
     data = {
         "id_session" : id
@@ -141,6 +160,14 @@ def get_chat_experimental(id:str):
 
     except Exception as e:
            logging.exception(e) 
+
+# """
+#     fungsi untuk mendapatkan id_session yang telah disimpan;
+#     params:
+#         id (str) : id_user (nik)
+#     returns:
+#         response (List[str]): list id_session;  
+# """
                      
 def get_session_experimental(id:str):
     data = {

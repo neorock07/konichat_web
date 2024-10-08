@@ -1,11 +1,12 @@
-# from openai import OpenAI
+from streamlit_cookies_controller import CookieController
+from streamlit import session_state as ss
+import time
+import streamlit as st
+from controller.cookies_controller import cookies
+import json
 
-# client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-# client.chat.completions.create(
-#             model=st.session_state["openai_model"],
-#             messages=[
-#                 {"role": m["role"], "content": m["content"]}
-#                 for m in st.session_state.messages
-#             ],
-#             stream=True,
-#         )
+if "login_data" in cookies:
+    user_data = json.loads(cookies["login_data"]) 
+    st.info(user_data)
+
+

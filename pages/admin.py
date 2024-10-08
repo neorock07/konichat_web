@@ -114,6 +114,12 @@ if selected_role is not None:
         if col2.button(f"🗑 Delete {selected_role}", type="primary"):
             pass
             
+
+st.divider()
+st.title("Document Feedback")
+feedback_doc = st.file_uploader(label="feedback doc", type="pdf")
+
+
     
         
 st.sidebar.divider()            

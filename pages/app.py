@@ -18,7 +18,7 @@ from modelMsg.session_model import SessionModel
 from datetime import datetime
 from layout.custom_layout import st_fixed_container
 from controller.auth_controller import logout
-
+from controller.copytext import on_copy_click
 
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
@@ -29,7 +29,6 @@ logging.basicConfig(
 
 # Membuat logger
 logger = logging.getLogger(__name__)
-# chunked = chunked_doc()
 
 
 if "session_id" not in st.session_state:
@@ -50,10 +49,12 @@ def_rag = init_rag()
 #     inisiasi session baru, jika ke history chat pakai session yg lama.
 #     init_rag -> proses embeddings dijalankan satu kali ketika streamlit di running.
 # """
+# data_login = controller.get("client_ussr")
+# logger.debug(f"data login : {data_login}")
+# if data_login is not None:
 if 'user_data' in st.session_state:
     data_login = st.session_state.user_data
-    # with st.spinner("loading menyiapkan dokumen..."):
-    #     rag_chain = init_rag()
+    
     if 'rag_init' not in st.session_state:
         st.session_state.rag_init = True
         with st.spinner("membuat sesi baru..."):
@@ -94,20 +95,7 @@ def handle_feedback():
         feedback(ulasan['score'], ulasan['text'], ai_respon, human_query)
         logger.debug(f"lha iki coeg {ulasan}")
 
-# """
-#     untuk mengubah object `generator` stream token, 
-#     menjadi full string;
-#     params:
-#         nested_generator (generator) : Generator[Any] 
-#     returns
-#         str;
-# """
-async def generator_to_str(nested_generator) -> str:
-    result = []
-    for generator in nested_generator:  # Iterate over the outer generator
-        for item in generator:  # Iterate over each inner generator
-            result.append(str(item.content))  # Convert each item to string and append
-    return ''.join(result) 
+
 
 # """
 #     text untuk print username
@@ -171,7 +159,9 @@ for idx, msg in enumerate(st.session_state[MESSAGES]):
         st.chat_message(USER, avatar="📌").write(msg.payload)
 
 # """
-#     kode untuk load previous chat dan assign ke session
+#     kode untuk ketika user ingin melanjutkan chat pada sesi sebelumnya;  
+#     see:
+#     kode untuk memuat previous chat dan assign ke session
 #     yang akan digunakan ke memory model.
 # """
 id_session_history = None
@@ -266,6 +256,9 @@ if prompt:
         ai_m = ''
         for i in st.session_state.message_ai:
             ai_m += i.content 
+        
+        st.button("📄", on_click=on_copy_click, args=(ai_m, ))
+        
         st.session_state[MESSAGES].append(Message(actor=AI, payload=ai_m))
         
         # """
@@ -300,7 +293,6 @@ if prompt:
         else:
             save_chat_experimental(ChatModel(
                 ai_respon=ai_m,
-                # ai_respon=response,
                 human_query=prompt,
                 tanggal=formatted_time,
                 id_session=id_session_history))

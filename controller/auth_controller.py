@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import logging
 import time
+# from controller.cookies_controller import cookies
 
 logging.basicConfig(
     level=logging.DEBUG,  # Menentukan level logging
@@ -43,9 +44,13 @@ def login(nik, password):
 
 
 def logout():
+    #inisiasi cookies
     st.session_state.logged_in = False
     st.toast("👋 Logged out successfully!")
     time.sleep(2)
+    #hapus cookies
+    # if "login_data" in cookies:
+    #     cookies.clear()
     st.switch_page("login.py")
     
     

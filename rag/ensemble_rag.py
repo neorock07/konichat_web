@@ -1,5 +1,4 @@
 from pydoc import doc
-
 from networkx import group_degree_centrality
 from . chunk import split_docs
 from .embedd_data import load_embedding_model, create_embeddings, load_retriever
@@ -19,6 +18,8 @@ import time
 import streamlit as st
 from controller.document_controller import download_doc, get_all_docs, get_by_id_docs
 from langchain_core.documents.base import Document
+from langchain.callbacks.base import BaseCallbackHandler
+
 # Mengatur konfigurasi logging
 logging.basicConfig(
     level=logging.DEBUG,  # Menentukan level logging
@@ -52,8 +53,6 @@ def load_downloaded_file():
     for i in docs_all:
         path_docs_dict.append(download_doc(i['file'], i['title']))  
         role_set.append(i['name'])
-    # file_path_manager = download_doc(docs_manager['file'], docs_manager['title'])
-    # file_path_user = download_doc(docs_user['file'], docs_user['title'])
     return path_docs_dict, role_set
 
 
@@ -69,6 +68,21 @@ def load_downloaded_file_byId(role):
     logger.debug(f"docs download : {docs}") 
     file_path = download_doc(docs['file'], docs['title'])
     return file_path
+
+# """
+#     fungsi untuk memproses embedding dokumen dan menyimpannya menjadi 
+#     objek FAISS untuk masing-masing role;
+#     e.g: role manager -> (docA, docB) -> vectorstore_manager.pkl
+#     proses ini disimpan dalam cache see: @st.cache_data;
+#     sehingga proses ini dilakukan hanya ketika kode aplikasi pertama kali dijalankan;
+#     note : agar caching dapat berjalan nama parameter diawali underscore e.g: _paramsA;
+#     params:
+#         _embed: model embedding untuk mengubah string to vector base;
+#         _llm: model text generation (ChatOllama);
+#     returns:
+#         doc_chunked (dict[int, list[Document]]): dictionary hasil split document masing-masing role;
+#             e.g: {'manager': [['isi konten A....'], ['isi konten B....']]}    
+# """
 
 @st.cache_data
 def chunked_doc(_embed, _llm,):
@@ -99,56 +113,41 @@ def chunked_doc(_embed, _llm,):
     for i in doc_chunked:
         create_embeddings(_llm, doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
 
-        
-    # logger.debug(f"group_doc_chunked : \n {group_doc}")
-    #membuat vectorstore dan retriever    
-    # for i in range(len(doc_path)):     
-    #     docs = load_pdf_data(file_path=doc_path[i])
-    #     documents = split_docs(_documents=docs, _chunk_size=1000, _chunk_overlap=200) 
-    #     doc_chunked[roles[i]] = documents
-    #     create_embeddings(_llm, documents, _embed, storing_path=f"vectorstore_{roles[i]}")
-    # logger.debug(f"len doc_path : \n {doc_path}")
-    # logger.debug(f"roles : {roles}")
     return doc_chunked    
 
 # """
-#     function untuk memproses embedding document;
+#     callback untuk ChatOllama class;
 # """
-# @st.cache_data
-# def process_embedding(_embed, _llm, _chunked):
-#     # doc_path = load_downloaded_file_byId(role)
-#     # doc_path, roles = load_downloaded_file()
-#     chunk_dokumen = _chunked
-#     for i in chunk_dokumen:
-#         create_embeddings(_llm, chunk_dokumen[i], _embed, storing_path=f"vectorstore_{i}")
-    #membuat vectorstore dan retriever    
-    # for i in range(doc_path):     
-    #     docs = load_pdf_data(file_path=doc_path[i])
-    #     documents = split_docs(documents=docs, chunk_size=1000, chunk_overlap=100)
-    #     retriever = create_embeddings(llm, documents, embed, storing_path=f"vectorstore_{roles[i]}")
-    
-    # return retriever
+
+class StreamingCallbackHandler(BaseCallbackHandler):
+    def __init__(self):
+        self.partial_output = ""
+
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        self.partial_output += token
+        print(token, end="", flush=True)
+        
+        
+def generate_stream_tokens(llm, question):
+    for chunk in llm.stream(question):
+        yield chunk.content 
 
 
 @st.cache_data
 def init_rag():
     global rag_dic
-    config = {"configurable" : {
-            "search_kwargs_faiss": {"k": 1}
-        }}
      
     templateSystem = """
         ### Instruction
-        You are an reliable and respectful assistant.Your name is KoniChat. You have to answer the user's \
-        questions using only the context provided to you, but assume this your genuine knowledge. If you don't know the answer, \
-        just say maaf, saya tidak tahu. Don't try to make up an answer. in the end of your answer you must ask wheter your answer helpful or not.\
-        if helpful you have to express your happines otherwise, you must apologize.\
-        if you asked about what you can do, say I assist to answer about your question related to rule in Konimex company.
-        .please answer all in bahasa indonesia or English if the question use one of those language with Empathetic response.
+        Anda adalah asisten yang dapat diandalkan dan penuh hormat. Nama Anda KoniChat. Anda harus menjawab \
+        pertanyaan hanya menggunakan konteks yang diberikan kepada Anda, tetapi asumsikan ini adalah pengetahuan asli Anda. Jika Anda tidak tahu jawabannya, \
+        katakan saja maaf, saya tidak tahu. Jangan mencoba mengarang jawaban. di akhir jawabanmu, kamu harus bertanya apakah jawabanmu bermanfaat atau tidak.\
+        jika membantu kamu harus mengungkapkan kebahagiaanmu, sebaliknya kamu harus meminta maaf.\
+        jika anda bertanya tentang apa yang dapat anda lakukan, katakanlah saya membantu menjawab pertanyaan anda terkait dengan peraturan di perusahaan Konimex.
+        .mohon dijawab semua dalam bahasa indonesia atau bahasa inggris jika pertanyaan menggunakan salah satu bahasa tersebut dengan respon Empati.
 
         ### Context:
         {context}
-
         """
 
 
@@ -160,24 +159,26 @@ def init_rag():
         """
     
     
-    llm = ChatOllama(model="gemma2:9b", temperature=0, base_url="https://a829-34-168-153-254.ngrok-free.app")
-    # llm = ChatOllama(model="llama3.1:8b", temperature=0, base_url="https://569f-34-70-156-78.ngrok-free.app")
+    # llm = ChatOllama(model="gemma2:9b", temperature=0, base_url="https://32b0-34-71-195-79.ngrok-free.app")
+    llm = ChatOllama(model="qwen2.5", 
+                     temperature=0,
+                     base_url="https://f779-35-222-81-176.ngrok-free.app")
     
     # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
-    # embed = load_embedding_model(model_path="paraphrase-multilingual-MiniLM-L12-v2")
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
     logger.debug("download embedding finished") 
-    #membuat retriever
+    
+    #paggil fungsi ini untuk melakukan proses embedding
     chunked = chunked_doc(embed, llm)
-    # retriever = process_embedding(embed, llm, chunked_doc)
+    
+    #[OPTIONAL RE-RANK MAYBE FOR FUTURE USE]
     # #re-rank document 
     # compressor = FlashrankRerank()
     # compression_retriever = ContextualCompressionRetriever(
     #     base_compressor=compressor,
     #     base_retriever=retriever
     # )
-    
-    # st.toast("✅ embedding selesai")    
+        
     #membuat template prompt untuk memberi tahu bahwa terdapat probabilitas 
     #percakapan sebelumnya relevan untuk menjawab pertanyaan terkini (give context for model)
     prompt_context = ChatPromptTemplate.from_messages(
@@ -196,37 +197,11 @@ def init_rag():
             ]
         )
         
- 
-    #membuat pipeline hasil respon model
-        # """
-        #     - query user akan diformat sesuai template prompt yang sudah ada, 
-        #     - hasil format akan diinputkan ke model llm sebagai formatted query
-        #     - hasil generate respon model akan diparser(ubah) ke dalam bentuk string
-    # """
-    context_chain = prompt_context | llm | StrOutputParser()   
-    
+     
+    context_chain = prompt_context | llm | StrOutputParser()     
     #buat objek untuk contextualization     
     util_context = Utils_context(context_chain=context_chain)   
     
-    # chunk =  chunked_doc
-    # to_chunk = chunk[role]
-    # retriever = load_retriever(embed, role, to_chunk, llm )
-        
-    # rag_chain = (
-    #         RunnablePassthrough.assign(
-    #             context=util_context.contextualization_question | RunnableLambda(lambda question: retriever.invoke(
-    #         question, config={"configurable": {"search_kwargs_faiss": {"k": 5}}}
-    #     )) | format_docs
-    #         ) | qa_prompt | llm
-    #     )
-    
-    # rag_dic = {
-    #         "rag_user" : rag_chain,
-    #         "retriever" : retriever,
-    #         "prompt" : rag_chain.get_prompts(),
-    #         "embed" :embed
-    #     }
-    # return rag_dic
     return {
         "util_context" : util_context.contextualization_question, 
         "qa_prompt" : qa_prompt, 
@@ -235,47 +210,47 @@ def init_rag():
         "embed" : embed
     }
     
-    # rag_chain = (
-    #         RunnablePassthrough.assign(
-    #             context=util_context.contextualization_question |  RunnableLambda(lambda question: retriever.invoke(
-    #         question, config={"configurable": {"search_kwargs_faiss": {"k": 5}}}
-    #     )) | format_docs
-    #         ) | qa_prompt | llm
-    #     )
-    
-        
-    # #dictionary untuk digunakan di function inference
-    # rag_dic = {
-    #         "rag_user" : rag_chain,
-    #         "retriever" : retriever,
-    #         "prompt" : rag_chain.get_prompts(),
-    #         "embed" :embed
-    #     }
-    # return rag_dic
-# @st.cache_data
+# """
+#     fungsi untuk mendapatkan prediction words dari model LLM;
+#     params:
+#         role (str) : role user
+#         chunked (dict(list, Lit[Document])): dictionary hasil split document masing2 role;
+#         context_question : objek sebagai pengarah pemberian context chat history;
+#         qa_prompt: template prompt untuk memodifikasi pertanyaan user;
+#         llm: model llm ChatOllama
+#         embed : model embedding
+#     returns:
+#         rag_dic (dict)    
+# """
+  
 def invoke_rag(role, chunked, context_question, qa_prompt, llm, embed):
     chunk =  chunked
     to_chunk = chunk[role]
-    st.toast(f"role : {role}")
-    # st.info(f"{len(chunk)}\n{to_chunk}")
-    # st.info(f"chunked : \n {chunked}\nto_chunk : \n{to_chunk}")
+    st.toast(f"Your Role : {role}")
     retriever = load_retriever(embed, role, to_chunk, llm )
         
+    #membuat pipeline hasil respon model
+        # """
+        #     - query user akan diformat sesuai template prompt yang sudah ada, 
+        #     - hasil format akan diinputkan ke model llm sebagai formatted query
+        #     - hasil generate respon model akan diparser(ubah) ke dalam bentuk string
+    # """
     rag_chain = (
-            RunnablePassthrough.assign(
-                context=context_question | RunnableLambda(lambda question: retriever.invoke(
+    RunnablePassthrough.assign(
+        context=context_question | 
+        RunnableLambda(lambda question: retriever.invoke(
             question, config={"configurable": {"search_kwargs_faiss": {"k": 3}}}
         )) | format_docs
-            ) | qa_prompt | llm
-        )
-    
+    ) | qa_prompt | RunnableLambda(lambda context: generate_stream_tokens(llm, context))
+    )
         
     #dictionary untuk digunakan di function inference
     rag_dic = {
             "rag_user" : rag_chain,
             "retriever" : retriever,
             "prompt" : rag_chain.get_prompts(),
-            "embed" :embed
+            "embed" :embed,
+            "llm" : llm
         }
     return rag_dic
 

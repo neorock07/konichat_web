@@ -29,6 +29,7 @@ def load_embedding_model(model_path, normalize_embedding=True):
     #     dan disimpan ke vectorstore FAISS.
         
     #     params:
+    #         llm: model ChatOllama
     #         chunks List[document]: document hasil chunk
     #         embedding_model Embeddings: model yang digunakan untuk melakukan embedding data
     #         storing_path: lokasi path penyimpanan vectorstore
@@ -48,22 +49,19 @@ def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
     # Menyimpan retriever ke path lokal
     hyde_retriever.save_local(storing_path)
     
-    # #buat retriever hyde dan vector retriever
-    # vector_retriver = vector_retriver.as_retriever(search_kwargs={"k": 10})
-    # hyde_retriever = hyde_retriever.as_retriever(search_kwargs={"k": 10})
-    
-    # # wrap retriever sebagai Runnable
-    # retrievers = [
-    #     # RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q)),  
-    #     RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  
-    #     vector_retriver
-    # ]
-    
-    # # Membuat Hybrid Search dengan Ensemble kedua metode
-    # vectorstore = EnsembleRetriever(retrievers=retrievers, weights=[0.3,0.7])
-    
-    # return vectorstore   
-    
+
+# """
+    #     kode untuk load objek retriever sesuai dengan role user
+    #     
+    #     params:
+    #         embed: model yang digunakan untuk melakukan embedding data
+    #         role (str) : role user
+    #         chunks List[document]: document hasil chunk
+    #         llm (ChatOllama): model llm  
+    #         
+    #     returns:
+    #         vectorstore: hasil embeddings berupa data vector documents    
+    # """
     
 def load_retriever(embed, role, chunks, llm):
     vector_path = f"vectorstore_{role}"
@@ -75,7 +73,6 @@ def load_retriever(embed, role, chunks, llm):
     bm25 = BM25Retriever.from_documents(chunks)
     bm25.k = 5
     
-    # vector_retriver = FAISS.from_documents(chunks, embed)
      #buat retriever hyde dan vector retriever
     vector_retriver = vector_store.as_retriever(search_kwargs={"k": 5})
     # vector_retriver = vector_retriver.as_retriever(search_kwargs={"k": 10})
@@ -83,7 +80,6 @@ def load_retriever(embed, role, chunks, llm):
     
     # wrap retriever sebagai Runnable
     retrievers = [
-        # RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q)),  
         RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  
         vector_retriver
     ]
