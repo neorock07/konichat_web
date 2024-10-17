@@ -2,6 +2,8 @@ import streamlit as st
 from streamlit_feedback import streamlit_feedback
 import logging
 from datetime import datetime
+
+from sympy import comp
 from rag.ensemble_rag import init_rag, chunked_doc, invoke_rag
 import uuid
 from controller.feedback_method import feedback
@@ -19,6 +21,8 @@ from datetime import datetime
 from layout.custom_layout import st_fixed_container
 from controller.auth_controller import logout
 from controller.copytext import on_copy_click
+import time
+
 
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
@@ -49,9 +53,7 @@ def_rag = init_rag()
 #     inisiasi session baru, jika ke history chat pakai session yg lama.
 #     init_rag -> proses embeddings dijalankan satu kali ketika streamlit di running.
 # """
-# data_login = controller.get("client_ussr")
-# logger.debug(f"data login : {data_login}")
-# if data_login is not None:
+
 if 'user_data' in st.session_state:
     data_login = st.session_state.user_data
     
@@ -64,10 +66,11 @@ if 'user_data' in st.session_state:
             rag_chain = invoke_rag(
                 role=data_login['name_role'],
                 chunked=def_rag['chunked'],
+                feed_chunked=def_rag["feedback"],
                 context_question=def_rag['util_context'], 
                 qa_prompt=def_rag['qa_prompt'],
                 llm=def_rag['llm'], 
-                embed=def_rag['embed']
+                embed=def_rag['embed'] 
                 )
             
             st.session_state.rag_chain = rag_chain
@@ -89,11 +92,14 @@ if "copied" not in st.session_state:
     
 ai_respon:str = ""
 human_query:str = ""    
-def handle_feedback():  
-        ulasan = dict(st.session_state.fb_k)
-        logger.debug(f"key ulasan : {ulasan.keys()}") 
-        feedback(ulasan['score'], ulasan['text'], ai_respon, human_query)
-        logger.debug(f"lha iki coeg {ulasan}")
+def handle_feedback():
+        if st.session_state.fb_k is not None:  
+            ulasan = dict(st.session_state.fb_k)
+            logger.debug(f"key ulasan : {ulasan.keys()}") 
+            feedback(ulasan['score'], ulasan['text'], ai_respon, human_query, data_login['role'])
+            logger.debug(f"lha iki coeg {ulasan}")
+        else:
+            st.toast("Sorry, your feedback could not be saved!")    
 
 
 
@@ -146,7 +152,16 @@ if 'run_id' not in st.session_state:
     st.session_state.run_id = uuid.uuid4().hex
 
 if MESSAGES not in st.session_state:
-    st.session_state[MESSAGES] = [Message(actor=AI, payload="Halo👋, saya KoniChat ada yang bisa saya bantu ?")]
+    typing_area = st.empty()
+    typing_speed = 0.01  # Kecepatan mengetik dalam detik per karakter
+    displayed_text = ""
+    greetings = "Halo👋, saya KoniChat ada yang bisa saya bantu ?"
+    for char in greetings:
+        displayed_text += char
+        typing_area.write(displayed_text)
+        time.sleep(typing_speed)
+    typing_area.empty()    
+    st.session_state[MESSAGES] = [Message(actor=AI, payload=greetings)]
 
 if "message_ai" not in st.session_state:
     st.session_state.message_ai = []
@@ -157,6 +172,14 @@ for idx, msg in enumerate(st.session_state[MESSAGES]):
         st.chat_message(AI, avatar="assets/fav.png").write(msg.payload)
     else:
         st.chat_message(USER, avatar="📌").write(msg.payload)
+    if idx == (len(st.session_state[MESSAGES])-1) and 'final_doc' in st.session_state:
+        with st.expander("Sumber Dokumen"):
+            st.write(st.session_state.final_doc)         
+# if 'sumber_final' in st.session_state:
+#     for idx in st.session_state.sumber_final:
+#         with st.expander("Sumber Dokumen"):
+#             st.write(f"{idx}")    
+                
 
 # """
 #     kode untuk ketika user ingin melanjutkan chat pada sesi sebelumnya;  
@@ -223,94 +246,121 @@ with st.sidebar:
 # """
 #     jika human memulai percakapan
 # """  
+human_query = None
+
 if prompt:
-    
     human_query = prompt
     st.session_state[MESSAGES].append(Message(actor=USER, payload=prompt))
     st.chat_message(USER, avatar="📌").write(prompt)
-    
-    with st.spinner("KoniChat sedang mengetik..."):
-        
-        # """
-        #     tampung setiap return dari inference.py
-        # """
-        
-        response, source_doc, final_doc,  time_respon = inference(st.session_state.rag_chain, Prompt(query=human_query, role=data_login['name_role'], id=data_login['id']))
-        
-        # """
-        #     tampilkan hasil respon Ai ke widget UI (token per token);
-        #     agar mendapatkan respon lebih cepat < 5 detik;
-        #     karena tidak menunggu jawaban full;
-        # """
+    task_txt = "KoniChat sedang mencari dokumen yang relevan..."
+    with st.spinner(task_txt):
             
+            # """
+            #     tampung setiap return dari inference.py
+            # """
+            
+        response, source_doc, final_doc,  time_respon = inference(st.session_state.rag_chain,
+                                                                    Prompt(query=human_query, role=data_login['name_role'], 
+                                                                        id=data_login['id']))
+          
+            # """
+            #     tampilkan hasil respon Ai ke widget UI (token per token);
+            #     agar mendapatkan respon lebih cepat < 5 detik;
+            #     karena tidak menunggu jawaban full;
+            # """
+                
         ai_respon = generate_response(Message(actor=AI, payload=response), source_doc, final_doc, time_respon=time_respon)
         today = datetime.today()
         formatted_time = today.strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state.final_doc = final_doc        
+            # """
+            # menggabungkan tiap token menjadi satu string;
+            #   e.g : 'H', 'a', 'l' => 'Hallo';
+            # lalu simpan ke session agar tetap ada ketika di-render ulang;
+            # """ 
             
-        # """
-        # menggabungkan tiap token menjadi satu string;
-        #   e.g : 'H', 'a', 'l' => 'Hallo';
-        # lalu simpan ke session agar tetap ada ketika di-render ulang;
-        # """ 
-        
         ai_m = ''
         for i in st.session_state.message_ai:
             ai_m += i.content 
         
+         # """
+        #     simpan ke history chat
+        # """
+        if 'continue_history' in st.session_state:
+                chat_history = st.session_state[st.session_state.id_sesi_prev]
+        else:
+                chat_history = st.session_state[f"chat_history_{st.session_state.session_id}"]
+            
+        chat_history.extend(
+                                [
+                                    f"human question : {human_query}",
+                                    f"your answer : {ai_m}" 
+                                ]
+                            )
+        
+        # st.info(chat_history[-2])
+      
+        # """
+        #     button untuk copy jawaban chatbot
+        # """    
         st.button("📄", on_click=on_copy_click, args=(ai_m, ))
-        
+            
         st.session_state[MESSAGES].append(Message(actor=AI, payload=ai_m))
-        
-        # """
-        #     cek sesi apakah sudah dibuat dan apakah sudah de-aktif,
-        #     simpan jika masih kondisi true.
-        # """
+        # st.session_state.sumber_final.append(final_doc)    
+            # """
+            #     cek sesi apakah sudah dibuat dan apakah sudah de-aktif,
+            #     simpan jika masih kondisi true.
+            # """
         if id_session_history is None:
             if 'isSessionCreated' in st.session_state and st.session_state.isSessionCreated is True:
-                save_session_experimental(SessionModel(
-                    id_session=f"chat_history_{st.session_state.session_id}",
-                    tanggal = formatted_time,
-                    title = prompt,
-                    id_user = data_login['id']
-                    ))
-            st.session_state.isSessionCreated = False
-                
-        else:
+                    save_session_experimental(SessionModel(
+                        id_session=f"chat_history_{st.session_state.session_id}",
+                        tanggal = formatted_time,
+                        title = prompt,
+                        id_user = data_login['id']
+                        ))
             st.session_state.isSessionCreated = False
                     
-        # """
-        #     simpan data setiap kali percakapan, 
-        #     dan hapus jawaban AI dari session sementara.
-        # """
-        if id_session_history is None:
-            save_chat_experimental(ChatModel(
-                ai_respon=ai_m,
-                # ai_respon=response,
-                human_query=prompt,
-                tanggal=formatted_time,
-                id_session=f"chat_history_{st.session_state.session_id}"))
-            st.session_state.message_ai.clear()
         else:
-            save_chat_experimental(ChatModel(
-                ai_respon=ai_m,
-                human_query=prompt,
-                tanggal=formatted_time,
-                id_session=id_session_history))
-            st.session_state.message_ai.clear()
-            
-        # """
-        #     get new history chat dari percakapan terkini
-        # """        
+            st.session_state.isSessionCreated = False
+                        
+            # """
+            #     simpan data setiap kali percakapan, 
+            #     dan hapus jawaban AI dari session sementara.
+            # """
+        if id_session_history is None:
+                save_chat_experimental(ChatModel(
+                    ai_respon=ai_m,
+                    # ai_respon=response,
+                    human_query=prompt,
+                    tanggal=formatted_time,
+                    id_session=f"chat_history_{st.session_state.session_id}"))
+                st.session_state.message_ai.clear()
+        else:
+                save_chat_experimental(ChatModel(
+                    ai_respon=ai_m,
+                    human_query=prompt,
+                    tanggal=formatted_time,
+                    id_session=id_session_history))
+                st.session_state.message_ai.clear()
+                
+            # """
+            #     get new history chat dari percakapan terkini
+            # """        
         chat_list = get_session_experimental(id=data_login['id'])
+                
             
-        
-        # """
-        #     form feedback akan tampil setiap ai selesai merespon
-        # """
-        # feedback_form()
+            # """
+            #     form feedback akan tampil setiap ai selesai merespon
+            # """
+            # feedback_form()
         with st.form('form'):
-            feedbck = streamlit_feedback(feedback_type="thumbs",
-                                optional_text_label="Berikan ulasanmu!", 
-                                align="flex-start", 
-                                key='fb_k')
-            st.form_submit_button('Save feedback', on_click=handle_feedback)
+                feedbck = streamlit_feedback(feedback_type="thumbs",
+                                        optional_text_label="Berikan ulasanmu!", 
+                                        align="flex-start", 
+                                        key='fb_k', 
+                                        # on_submit=handle_feedback
+                                        )
+            # st.info(feedbck)
+                st.form_submit_button('Save feedback', on_click=handle_feedback)
+                

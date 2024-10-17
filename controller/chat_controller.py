@@ -61,20 +61,16 @@ def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
     
     with typing_area.chat_message(msg.actor, avatar="assets/fav.png"):
         token_full = typing_area.write_stream(msg.payload)
-    # token_full = generator_to_str(token_full)    
-    # st.session_state.messages_stm.append(Message(actor=AI, payload=token_full))    
-    # st.session_state[MESSAGES].append(Message(actor=AI, payload=token_full)) 
-    # token_full = generator_to_str(token_full)
+   
     
     st.divider()
-    sumber_dc = ""
-    # st.text("Sumber Dokumen")
-    with st.expander("Sumber Dokumen"):
-        for i in sumber:
-            sumber_dc += i.page_content
-        st.write(sumber_dc)
+    # sumber_dc = ""
+    # with st.expander("Sumber Dokumen"):
+    #     for i in sumber:
+    #         sumber_dc += i.page_content
+    #     st.write(sumber_dc)
     
-    with st.expander("Sumber Dokumen Final"):
+    with st.expander("Sumber Dokumen"):
         st.write(final_sumber)
     
     # st.info(sumber)
@@ -85,6 +81,8 @@ def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
     annotated_text(
     ("waktu respon",f"{time_respon:.2f} s"),
     )
+    
+    
     return token_full
 
 # """

@@ -12,7 +12,7 @@ logging.basicConfig(
 # Membuat logger
 logger = logging.getLogger(__name__)
 
-def feedback(tipe, feedback:str, ai_respon:str, query:str):
+def feedback(tipe, feedback:str, ai_respon:str, query:str, role:int):
     type = ""
     if tipe == "👎":
         type = "BAD"
@@ -24,7 +24,8 @@ def feedback(tipe, feedback:str, ai_respon:str, query:str):
         "tipe": type,
         "ai_respon":ai_respon, 
         "human_query":query,
-        "feedback": feedback
+        "feedback": feedback, 
+        "id_role" : role
         }
         
     # URL endpoint 
@@ -45,7 +46,10 @@ def feedback(tipe, feedback:str, ai_respon:str, query:str):
 
     except Exception as e:
            logging.exception(e)
-           
+
+# """
+#     fungsi untuk mendapatkan jumlah feedback tipe Bad atau Good;
+# """           
 def get_count_feedback():    
     # URL endpoint 
     url = 'http://127.0.0.1:8000/api/feedback/count'
@@ -58,11 +62,39 @@ def get_count_feedback():
         if response.status_code == 200:
                 # Mengambil respons JSON
                 logger.debug("berhasil get feedback")
-                st.toast("✔️ Got Feedback")
                 return response.json()['data']
         else:
                 logger.debug("gagal get feedback")
                 st.toast("❌ Couldn't get feedback")
+                return "error"    
+    except Exception as e:
+           logging.exception(e)
+
+# """
+#     fungsi untuk mengambil data feedback user yang tipe BAD,
+#     untuk digunakan sebagai bahan membuat dokumen revisi untuk 
+#     fine tuning;
+# """
+
+def get_bad_feedback(id_role:int):    
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/feedback/get'
+        
+    try:
+        data = {
+            'id_role':id_role,
+             }
+        # Melakukan POST request ke endpoint
+        response = requests.get(url, data=data)
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+                logger.debug("berhasil get feedback")
+                return response.json()['data']
+        else:
+                logger.debug("gagal get feedback")
+                # st.toast("❌ Couldn't get feedback")
                 return "error"    
     except Exception as e:
            logging.exception(e)

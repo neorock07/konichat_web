@@ -48,6 +48,15 @@ def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
 
     # Menyimpan retriever ke path lokal
     hyde_retriever.save_local(storing_path)
+
+def create_embeddings_by_texts(chunks, embedding_model, storing_path="vectorstore"):
+    retriever = FAISS.from_texts(chunks, embedding_model)
+    
+    bm25 = BM25Retriever.from_texts(chunks)
+    bm25.k = 10
+    
+    # Menyimpan retriever ke path lokal
+    retriever.save_local(storing_path)
     
 
 # """
@@ -63,21 +72,51 @@ def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
     #         vectorstore: hasil embeddings berupa data vector documents    
     # """
     
+# def load_retriever(embed, role, chunks, llm):
+#     vector_path = f"vectorstore_{role}"
+#     retriever = {}
+#     vector_store =  FAISS.load_local(vector_path, embed, allow_dangerous_deserialization=True)
+#     # hyde = HypotheticalDocumentEmbedder.from_llm(llm=llm, base_embeddings=embed, prompt_key="web_search")
+#     # hyde_retriever = FAISS.from_documents(chunks, hyde)
+    
+#     # bm25 = BM25Retriever.from_texts(chunks)
+#     bm25 = BM25Retriever.from_documents(chunks)
+#     bm25.k = 20
+    
+#      #buat retriever hyde dan vector retriever
+#     vector_retriver = vector_store.as_retriever(search_type="mmr",
+#                                                 search_kwargs={'k': 10, 
+#                                                 'fetch_k': 50})
+#     # vector_retriver = vector_retriver.as_retriever(search_kwargs={"k": 10})
+#     # hyde_retriever = hyde_retriever.as_retriever(search_kwargs={"k": 5})
+    
+#     # wrap retriever sebagai Runnable
+#     retrievers = [
+#         RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  
+#         vector_retriver
+#     ]
+    
+#     # Membuat Hybrid Search dengan Ensemble kedua metode
+#     vectorstore = EnsembleRetriever(retrievers=retrievers, weights=[0.3,0.7])
+#     retriever[role] = vectorstore
+    
+#     return retriever[role]
+
+
+
+
 def load_retriever(embed, role, chunks, llm):
     vector_path = f"vectorstore_{role}"
     retriever = {}
     vector_store =  FAISS.load_local(vector_path, embed, allow_dangerous_deserialization=True)
-    hyde = HypotheticalDocumentEmbedder.from_llm(llm=llm, base_embeddings=embed, prompt_key="web_search")
-    hyde_retriever = FAISS.from_documents(chunks, hyde)
     
-    bm25 = BM25Retriever.from_documents(chunks)
-    bm25.k = 5
+    bm25 = BM25Retriever.from_texts(chunks)
+    bm25.k = 10
     
      #buat retriever hyde dan vector retriever
-    vector_retriver = vector_store.as_retriever(search_kwargs={"k": 5})
-    # vector_retriver = vector_retriver.as_retriever(search_kwargs={"k": 10})
-    hyde_retriever = hyde_retriever.as_retriever(search_kwargs={"k": 5})
-    
+    vector_retriver = vector_store.as_retriever(search_type="mmr",
+                                                search_kwargs={'k': 10, 
+                                                'fetch_k': 30})   
     # wrap retriever sebagai Runnable
     retrievers = [
         RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  
@@ -88,5 +127,48 @@ def load_retriever(embed, role, chunks, llm):
     vectorstore = EnsembleRetriever(retrievers=retrievers, weights=[0.3,0.7])
     retriever[role] = vectorstore
     
-    return retriever[role]   
+    return retriever[role]
+
+
+# """
+    #     kode untuk load objek retriever untuk doc. feedback sesuai dengan role user
+    #     
+    #     params:
+    #         embed: model yang digunakan untuk melakukan embedding data
+    #         role (str) : role user
+    #         chunks List[document]: document hasil chunk 
+    #         
+    #     returns:
+    #         vectorstore: hasil embeddings berupa data vector documents    
+    # """
+ 
+def load_retriever_feed(embed, role, chunks):
+    retriever = {}
+    vector_path = f"vectorstore_feedback_{role}"
+    vector_store =  FAISS.load_local(vector_path, embed, allow_dangerous_deserialization=True)
+    # bm25 = BM25Retriever.from_texts(chunks)
+    bm25 = BM25Retriever.from_documents(chunks)
+    bm25.k = 1
+    
+     #buat retriever vector retriever
+    vector_retriver = vector_store.as_retriever(
+                                    search_type="similarity_score_threshold",
+                                    search_kwargs={'score_threshold': 0.99},
+                                    # search_kwargs={"k": 1,
+                                    #             'lambda_mult': 0.25
+                                    #                }
+                                    )
+    
+    # wrap retriever sebagai Runnable
+    retrievers = [
+        RunnableLambda(lambda q: bm25.get_relevant_documents(q)),  
+        vector_retriver
+    ]
+    
+    # Membuat Hybrid Search dengan Ensemble kedua metode
+    retrieve = EnsembleRetriever(retrievers=retrievers, weights=[0.3,0.7])
+    retriever[role] = retrieve
+    return retriever[role]
+
+   
     

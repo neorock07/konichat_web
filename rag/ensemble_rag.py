@@ -1,13 +1,9 @@
-from pydoc import doc
-from networkx import group_degree_centrality
-from . chunk import split_docs
-from .embedd_data import load_embedding_model, create_embeddings, load_retriever
+from . chunk import split_docs, EOSSplitter
+from .embedd_data import create_embeddings_by_texts, load_embedding_model, create_embeddings, load_retriever, load_retriever_feed
 from .load_data import load_pdf_data
 from .utils_context import Utils_context
 import logging
-from langchain_community.llms import Ollama
 from langchain_community.chat_models.ollama import ChatOllama
-from langchain_core.prompts import PromptTemplate
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -16,9 +12,10 @@ from langchain.retrievers import ContextualCompressionRetriever
 from dataclasses import dataclass
 import time
 import streamlit as st
-from controller.document_controller import download_doc, get_all_docs, get_by_id_docs
+from controller.document_controller import download_doc, get_all_docs, get_by_id_docs, get_feedback_doc
 from langchain_core.documents.base import Document
 from langchain.callbacks.base import BaseCallbackHandler
+from pathlib import Path
 
 # Mengatur konfigurasi logging
 logging.basicConfig(
@@ -43,7 +40,7 @@ file_path_user = None
 #     mengambil seluruh data dokumen;
 #     tujuan : `mengambil data semua lalu process satu waktu`
 # """
-# @st.cache_data
+
 def load_downloaded_file():
     global file_path_manager
     global file_path_user
@@ -53,10 +50,25 @@ def load_downloaded_file():
     for i in docs_all:
         path_docs_dict.append(download_doc(i['file'], i['title']))  
         role_set.append(i['name'])
-    return path_docs_dict, role_set
+    
+    ####################################################
+    #            Feedback document                    #
+    ################################################### 
+    docs_feedback = get_feedback_doc()
+    path_feed_doc = []
+    if docs_feedback is not [] or docs_feedback is not None:
+        for i in docs_feedback:
+            data = {
+              "role_name" :  i['name'],
+              "path" :  download_doc(i['file'], i['title'])
+            }
+            path_feed_doc.append(data) 
+
+    return path_docs_dict, role_set, path_feed_doc
 
 
 # """
+#     DO NOT USE THIS FUNCTION   
 #     gunakan ini untuk mendownload 1 document sesuai role user yang login;    
 #     mengambil seluruh data dokumen;
 #     tujuan : `mengambil data sesuai role lalu process`
@@ -84,10 +96,77 @@ def load_downloaded_file_byId(role):
 #             e.g: {'manager': [['isi konten A....'], ['isi konten B....']]}    
 # """
 
+# @st.cache_data
+# def chunked_doc(_embed, _llm,):
+#     full_pdf = ""
+#     pdfs = None
+#     chunk_eos = EOSSplitter(chunk_size=1200, chunk_overlap=300)
+#     # """
+#     #     kode untuk memproses chunk sumber documents
+#     # """
+#     doc_chunked: dict[int, list[Document]] = {}
+#     doc_path, roles, doc_feedback_path = load_downloaded_file()
+#     roles = list(roles)
+    
+#     # Mengelompokkan dokumen berdasarkan role
+#     group_doc = {}
+#     for i in range(len(doc_path)):
+#         if roles[i] not in group_doc:
+#             group_doc[roles[i]] = []
+#         group_doc[roles[i]].append(doc_path[i])      
+    
+#     # Membagi dokumen menjadi chunk dan menyimpannya di doc_chunked
+#     for i in group_doc:
+#         documents: list[Document] = []
+#         for j in group_doc[i]:
+#             docs = load_pdf_data(file_path=j)
+#             ##############################################
+#             #              troubleshoot                  #
+#             ##############################################
+#             # for g in docs:
+#             #     full_pdf += g.page_content
+#             # pdfs = full_pdf.split("<EOS>")
+#             # for mj in pdfs:
+#             #     logger.debug(mj+"\n\n")
+            
+#             documents.extend(chunk_eos.split_documents(documents=docs))  
+#             # documents.extend(split_docs(_documents=docs, _chunk_size=1000, _chunk_overlap=200))  
+#         if i not in doc_chunked:
+#             doc_chunked[i] = []
+        
+#         # Menggunakan extend agar tidak membuat list di dalam list
+#         doc_chunked[i].extend(documents)
+    
+#     # Membuat embeddings untuk setiap dokumen yang sudah di-chunk
+#     for i in doc_chunked:
+#         create_embeddings(_llm, doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
+    
+#     ############################################################
+#     #               Chunk Document Feedback                   #
+#     ##########################################################
+    
+#     dict_feed:dict[str, list[Document]] = {}
+#     if doc_feedback_path is not [] or doc_feedback_path is not None:
+#         # Membuat chunk untuk document feedback
+#         for i in doc_feedback_path:
+#             doc_feed = load_pdf_data(file_path = i['path'])
+#             feed_chunked = split_docs(_documents = doc_feed, _chunk_size=1500, _chunk_overlap=400, separator=["<EOS>"])
+#             dict_feed[i['role_name']] = feed_chunked
+#             # membuat embedding untuk dokumen revisi feedback
+#             create_embeddings(_llm, feed_chunked, _embed, storing_path=f"vectorstore_feedback_{i['role_name']}")    
+            
+#     return doc_chunked, dict_feed   
+
+
+ 
 @st.cache_data
 def chunked_doc(_embed, _llm,):
-    doc_chunked: dict[int, list[Document]] = {}
-    doc_path, roles = load_downloaded_file()
+    
+    # """
+    #     kode untuk memproses chunk sumber documents
+    # """
+    doc_chunked: dict[int, list[str]] = {}
+    doc_path, roles, doc_feedback_path = load_downloaded_file()
     roles = list(roles)
     
     # Mengelompokkan dokumen berdasarkan role
@@ -99,10 +178,24 @@ def chunked_doc(_embed, _llm,):
     
     # Membagi dokumen menjadi chunk dan menyimpannya di doc_chunked
     for i in group_doc:
-        documents: list[Document] = []
+        documents: list[str] = []
+        full_pdf = ""
+        pdfs = None
+        list_pdf_content = []
         for j in group_doc[i]:
             docs = load_pdf_data(file_path=j)
-            documents.extend(split_docs(_documents=docs, _chunk_size=1000, _chunk_overlap=200))  
+            ##############################################
+            #              troubleshoot                  #
+            ##############################################
+            for g in docs:
+                full_pdf += g.page_content
+            pdfs = full_pdf.split("<EOS>")
+            for mj in pdfs:
+                list_pdf_content.append(mj)
+                # logger.debug(mj+"\n\n")
+            
+            documents.extend(list_pdf_content)  
+            # documents.extend(split_docs(_documents=docs, _chunk_size=1000, _chunk_overlap=200))  
         if i not in doc_chunked:
             doc_chunked[i] = []
         
@@ -111,9 +204,23 @@ def chunked_doc(_embed, _llm,):
     
     # Membuat embeddings untuk setiap dokumen yang sudah di-chunk
     for i in doc_chunked:
-        create_embeddings(_llm, doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
-
-    return doc_chunked    
+        # create_embeddings(_llm, doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
+        create_embeddings_by_texts(doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
+    ############################################################
+    #               Chunk Document Feedback                   #
+    ##########################################################
+    
+    dict_feed:dict[str, list[Document]] = {}
+    if doc_feedback_path is not [] or doc_feedback_path is not None:
+        # Membuat chunk untuk document feedback
+        for i in doc_feedback_path:
+            doc_feed = load_pdf_data(file_path = i['path'])
+            feed_chunked = split_docs(_documents = doc_feed, _chunk_size=1500, _chunk_overlap=400, separator=["<EOS>"])
+            dict_feed[i['role_name']] = feed_chunked
+            # membuat embedding untuk dokumen revisi feedback
+            create_embeddings(_llm, feed_chunked, _embed, storing_path=f"vectorstore_feedback_{i['role_name']}")    
+            
+    return doc_chunked, dict_feed    
 
 # """
 #     callback untuk ChatOllama class;
@@ -160,17 +267,21 @@ def init_rag():
     
     
     # llm = ChatOllama(model="gemma2:9b", temperature=0, base_url="https://32b0-34-71-195-79.ngrok-free.app")
-    llm = ChatOllama(model="qwen2.5", 
+    # llm = ChatOllama(model="gemma2:9b", 
+    llm = ChatOllama(model="qwen2.5:14b", 
                      temperature=0,
-                     base_url="https://f779-35-222-81-176.ngrok-free.app")
+                     base_url="https://4ba5-35-185-174-38.ngrok-free.app")
     
     # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
     logger.debug("download embedding finished") 
     
     #paggil fungsi ini untuk melakukan proses embedding
-    chunked = chunked_doc(embed, llm)
+    # note: default value feed_chunked = {}
+    chunked, feed_chunked = chunked_doc(embed, llm)
     
+    if feed_chunked is {}:
+        feed_chunked = None
     #[OPTIONAL RE-RANK MAYBE FOR FUTURE USE]
     # #re-rank document 
     # compressor = FlashrankRerank()
@@ -206,7 +317,8 @@ def init_rag():
         "util_context" : util_context.contextualization_question, 
         "qa_prompt" : qa_prompt, 
         "llm" : llm,
-        "chunked" : chunked, 
+        "chunked" : chunked,
+        "feedback" : feed_chunked, 
         "embed" : embed
     }
     
@@ -221,14 +333,26 @@ def init_rag():
 #         embed : model embedding
 #     returns:
 #         rag_dic (dict)    
+#
+##   NOTE: kode digunakan di file app.py
 # """
   
-def invoke_rag(role, chunked, context_question, qa_prompt, llm, embed):
+def invoke_rag(role, chunked, feed_chunked , context_question, qa_prompt, llm, embed):
+    # """
+    #     chunk document sumber;
+    # """
     chunk =  chunked
     to_chunk = chunk[role]
     st.toast(f"Your Role : {role}")
     retriever = load_retriever(embed, role, to_chunk, llm )
-        
+    
+    # """
+    #     chunk document feedback
+    # """
+    retriever_feedback = None
+    if feed_chunked is not None and role in feed_chunked:
+        to_chunk_feed = feed_chunked[role]
+        retriever_feedback = load_retriever_feed(embed, role, to_chunk_feed) 
     #membuat pipeline hasil respon model
         # """
         #     - query user akan diformat sesuai template prompt yang sudah ada, 
@@ -248,6 +372,7 @@ def invoke_rag(role, chunked, context_question, qa_prompt, llm, embed):
     rag_dic = {
             "rag_user" : rag_chain,
             "retriever" : retriever,
+            "retriever_feed": retriever_feedback,
             "prompt" : rag_chain.get_prompts(),
             "embed" :embed,
             "llm" : llm
