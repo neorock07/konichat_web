@@ -122,6 +122,32 @@ def get_by_id_docs(id_role):
                 st.toast("❌ Couldn't get Docs | try refresh page!")
                 st.warning(f"Message : {e}")
                 st.stop()
+
+# """
+#     kode utuk delete dokumen by id;
+# """
+def delete_docs(id_doc):    
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/doc/delete'
+    data = {
+                'id' : id_doc
+            }    
+    try:
+        # Melakukan POST request ke endpoint
+        response = requests.delete(url, data=data)
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+                st.toast("✔️ Document Deleted")
+                return response.json()
+        else:
+                st.toast("❌ Couldn't delete document")
+                return "error"    
+    except Exception as e:
+                st.toast("❌ Couldn't delete Docs | try refresh page!")
+                st.warning(f"Message : {e}")
+                st.stop()
                   
 
 # """
@@ -139,6 +165,31 @@ def get_feedback_doc():
         if response.status_code == 200:
                 # Mengambil respons JSON
                 return response.json()
+        else:
+                st.toast("❌ Couldn't get Fallback")
+                return "error"    
+    except Exception as e:
+                st.toast("❌ Couldn't get Docs | try refresh page!")
+                st.warning(f"Message : {e}")
+                st.stop()
+
+# """
+#     kode utuk mendapatkan dokumen feedback by id role;
+# """
+def get_feedback_doc_by_id(id_role):    
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/feedback/doc/id'
+ 
+    try:
+        # Melakukan POST request ke endpoint
+        response = requests.get(url, data={'id_role':id_role})
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+                return response.json()
+        elif response.status_code == 404:
+                return None
         else:
                 st.toast("❌ Couldn't get Fallback")
                 return "error"    
@@ -194,6 +245,34 @@ def upload_document_feedback(file, id_role,):
     else:
         return "file is None"      
                 
+
+# """
+#     kode utuk delete dokumen feedback by id role;
+# """
+def delete_feedback_docs(id_role):    
+    # URL endpoint 
+    url = 'http://127.0.0.1:8000/api/feedback/doc/delete'
+    data = {
+                'id_role' : id_role
+            }    
+    try:
+        # Melakukan POST request ke endpoint
+        response = requests.delete(url, data=data)
+            
+         # Memeriksa apakah request berhasil
+        if response.status_code == 200:
+                # Mengambil respons JSON
+                st.toast("✔️ Document Deleted")
+                return response.json()
+        else:
+                st.toast("❌ Couldn't delete document")
+                return "error"    
+    except Exception as e:
+                st.toast("❌ Couldn't delete Docs | try refresh page!")
+                st.warning(f"Message : {e}")
+                st.stop()
+
+
             
 def download_doc(url, file_name):
     response = requests.get(url)

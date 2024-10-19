@@ -268,9 +268,9 @@ def init_rag():
     
     # llm = ChatOllama(model="gemma2:9b", temperature=0, base_url="https://32b0-34-71-195-79.ngrok-free.app")
     # llm = ChatOllama(model="gemma2:9b", 
-    llm = ChatOllama(model="qwen2.5:14b", 
+    llm = ChatOllama(model="gemma_8192:latest", 
                      temperature=0,
-                     base_url="https://4ba5-35-185-174-38.ngrok-free.app")
+                     base_url="https://c65a-34-142-188-148.ngrok-free.app")
     
     # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")

@@ -1,0 +1,11 @@
+!ollama show llama3.1:8b --modelfile > llama3.1.modelfile
+
+!cat llama3.1.modelfile
+
+!cp -f /kaggle/input/mdfile/llama.modelfile llama3.1.modelfile
+
+!cat llama3.1.modelfile
+
+!ollama create llama3.1_8192 --file llama3.1.modelfile
+
+!ollama list

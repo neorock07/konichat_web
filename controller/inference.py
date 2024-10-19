@@ -37,6 +37,7 @@ templateSystem = """
         Anda adalah asisten yang dapat diandalkan dan penuh hormat. Nama Anda KoniChat. Anda harus menjawab pertanyaan \
         hanya menggunakan konteks yang kamu miliki sebagai pengetahuan, PERHATIKAN tanda `terkait dokumen:` Anda harus menjawab query relevan dengan dokumen yang seharusnya. Jika konteks yang diberikan tidak relevan atau tidak cukup untuk menjawab pertanyaan, \
         katakan "Maaf, saya tidak tahu". Jangan mencoba mengarang jawaban atau memberikan informasi di luar konteks yang disediakan. \
+        Saya tidak ingin JAWABAN pada aspek UMUM atau Biasanya, saya HANYA ingin JAWABAN dari CONTEXT yang ada!. \    
         Di akhir jawabanmu, tanyakan apakah jawabanmu bermanfaat atau tidak. Jika bermanfaat, ungkapkan kebahagiaanmu, \
         sebaliknya jika tidak membantu, mintalah maaf.
 
@@ -85,7 +86,8 @@ templateFallback = """
 #         respon (str) : hasil respon string model
 #         response_time (float) : lama waktu respon model
 # """
-       
+
+@st.fragment       
 def inference(rag, input:Prompt):
     query = input.query
     role = input.role
@@ -111,6 +113,12 @@ def inference(rag, input:Prompt):
             #     ubah data menjadi string untuk di cetak sebagai sumber rujukan dokumen, 
             #     untuk di tampilkan di UI.
             # """
+            if len(chat_history) > 0:
+                list_temp = ""
+                for x in chat_history[-2:]:
+                    list_temp += f"{x['human_question']}\n\n" 
+                doc_retrieve = rag['retriever'].get_relevant_documents(list_temp + query)
+                
             doc_retrieve = rag['retriever'].get_relevant_documents(query)
             sumber_dc = ""
             list_doc = []
@@ -129,8 +137,8 @@ def inference(rag, input:Prompt):
             #model embedding
             
             full_hist = ""
-            for i in chat_history:
-                full_hist += str(i)
+            for x in chat_history:
+                full_hist += f"human : {x['human_question']}\n\nbot : {x['your_answer']}\n\n" 
             
             embed = rag['embed']    
             doc_filtered = FAISS.from_texts(list_doc, embed)
@@ -138,7 +146,7 @@ def inference(rag, input:Prompt):
                                             search_kwargs={'k': 3})
             
             bm25 = BM25Retriever.from_texts(list_doc)
-            bm25.k = 4
+            bm25.k = 5
             retrievers = [
             # RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q)),  
             bm25,  
@@ -153,7 +161,7 @@ def inference(rag, input:Prompt):
             
             list_final_doc = []
             for i in final_doc:
-                # pre_word = str(i.page_content).replace('•', '\n')
+                pre_word = str(i.page_content).replace('•', '\n')
                 pre_word = str(i.page_content).replace('', '\n')
                 formatted_text_1 = re.sub(r'(\d+\.\d+)', r'\n\1', pre_word)
                 formatted_text_1 = re.sub(r'(\d+\.\d+\.\d+)', r'\n\1', formatted_text_1)
@@ -208,7 +216,7 @@ def inference(rag, input:Prompt):
             # count = 0
             # for i in ranked_docs:
             #     # pre_word = str(i.page_content).replace('•', '\n')
-            #     pre_word = str(i.page_content).replace('', '\n')
+            #     pre_word = str(i.page_content).replace('', '\n•')
             #     count += 1                    
             #     # post_word = re.sub(r'\d+\.\d+\.\d+', '\n', pre_word)
             #     # final_sumber_doc += f"{pre_word}\n\n"

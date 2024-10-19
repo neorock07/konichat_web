@@ -48,6 +48,8 @@ def generator_to_str(nested_generator) -> str:
             result.append(str(item.content))  # Convert each item to string and append
     return ''.join(result) 
 
+
+@st.fragment
 def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
     # token_full = ""
     typing_area = st.empty()
@@ -63,13 +65,7 @@ def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
         token_full = typing_area.write_stream(msg.payload)
    
     
-    st.divider()
-    # sumber_dc = ""
-    # with st.expander("Sumber Dokumen"):
-    #     for i in sumber:
-    #         sumber_dc += i.page_content
-    #     st.write(sumber_dc)
-    
+    st.divider()    
     with st.expander("Sumber Dokumen"):
         st.write(final_sumber)
     

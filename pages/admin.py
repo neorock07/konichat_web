@@ -1,17 +1,17 @@
+from httpx import delete
 import streamlit as st
-from controller.document_controller import upload_document
+from controller.document_controller import delete_docs, upload_document
 from controller.document_controller import update_document
 from controller.auth_controller import get_all_role
 from controller.feedback_method import get_count_feedback, get_bad_feedback
-from controller.document_controller import get_all_docs, get_feedback_doc, upload_document_feedback
+from controller.document_controller import get_all_docs, get_feedback_doc, upload_document_feedback, get_feedback_doc_by_id
+from controller.document_controller import delete_docs,delete_feedback_docs
 from datetime import datetime
 import docx
 from io import BytesIO
 import os
 import subprocess
 import streamlit as st
-import signal
-import psutil
 import pyautogui
 import time
 
@@ -27,7 +27,7 @@ roles_feed = []
 id_role_selected = None
 for i in role:
     list_role.append(i['name'])
-    roles_feed.append(i['name'])    
+    roles_feed.append({i['name'] : i['id']})    
 if role != "error" or role is not None:
     with st.sidebar:
         st.header("Upload New Doc.")
@@ -49,6 +49,7 @@ if role != "error" or role is not None:
                     result = upload_document(i, id_role_selected)
             else:
                 st.toast("Please provide file!")    
+            st.rerun()    
 
 def update_doc(file, id_role):
     if file is not None:
@@ -73,112 +74,153 @@ if data_count_feedback != "error":
 ########################################################################
 ##                     Dokumen Sumber                                 ##
 ########################################################################
-st.divider() 
-st.header("Update Document Sumber")    
+@st.fragment
+@st.dialog(title= "Yakin ingin menghapus?")
+def dialog_konf_doc(id_doc):
+    if st.button("Yakin"):
+        delete_docs(id_doc)
+        st.rerun()
 
-# """
-#     grouping data documents per role
-#     e.g : {'manager':[..., ...], ...}
-# """
+roles = None
+@st.fragment
+def widget_doc_sumber():    
+    st.divider() 
+    st.header("Update Document Sumber")    
+    global roles
+    # """
+    #     grouping data documents per role
+    #     e.g : {'manager':[..., ...], ...}
+    # """
 
-group_doc = {}
-for i in data_docs:
-    name = i['name']
-    if name not in group_doc:
-        group_doc[name] = []
-    group_doc[name].append(i)
-            
+    group_doc = {}
+    for i in data_docs:
+        name = i['name']
+        if name not in group_doc:
+            group_doc[name] = []
+        group_doc[name].append(i)
+                
 
-file_upload_update = {}    
-roles = ['--pilih--']
-roles.extend([i for i in group_doc.keys()])
-selected_role = None
-selected_doc = None
-selected_index = None
-docs_id = None
-with st.container(height=120):
-    selected_role = st.selectbox("Role", options=roles)
+    file_upload_update = {}    
+    roles = ['--pilih--']
+    roles.extend([i for i in group_doc.keys()])
+    selected_role = None
+    selected_doc = None
+    selected_index = None
+    docs_id = None
+    with st.container(height=120):
+        selected_role = st.selectbox("Role", options=roles)
 
-with st.container(height=180):
-    if selected_role is not '--pilih--':
-        docs_title = [i['title'] for i in group_doc[selected_role]]
-        docs_id = [i for i in group_doc[selected_role]]
-        selected_doc = st.selectbox("Dokumen", options=docs_title, index=None, placeholder="search doc...")
-        if selected_doc is not None:
-            selected_index = docs_title.index(selected_doc)
-        else:
-            selected_role = None
-    else:
-        st.write("Dokumen")
-        st.warning("Pilih role yang valid!")    
-        selected_role = None
-
-
-if selected_role is not None:
-    id_doc_update = docs_id[selected_index]['id']
     with st.container(height=180):
-        file_update = st.file_uploader("upload update doc", type=["pdf"])
-    col1, col2 = st.columns([0.2, 0.8], gap="small")
-    with col1:
-        if col1.button(f"✏ Update {selected_role}"):
-            update_doc(file_update, id_doc_update)
-    with col2:
-        if col2.button(f"🗑 Delete {selected_role}", type="primary"):
-            pass
-            
+        if selected_role is not '--pilih--':
+            docs_title = [i['title'] for i in group_doc[selected_role]]
+            docs_id = [i for i in group_doc[selected_role]]
+            selected_doc = st.selectbox("Dokumen", options=docs_title, index=None, placeholder="search doc...")
+            if selected_doc is not None:
+                selected_index = docs_title.index(selected_doc)
+            else:
+                selected_role = None
+        else:
+            st.write("Dokumen")
+            st.warning("Pilih role yang valid!")    
+            selected_role = None
 
+
+    if selected_role is not None:
+        id_doc_update = docs_id[selected_index]['id']
+        with st.container(height=180):
+            file_update = st.file_uploader("upload update doc", type=["pdf"])
+        col1, col2 = st.columns([0.2, 0.8], gap="small")
+        with col1:
+            if col1.button(f"✏ Update {selected_role}"):
+                update_doc(file_update, id_doc_update)
+        with col2:
+            if col2.button(f"🗑 Delete {selected_role}", type="primary"):
+                # delete_docs(id_doc_update)
+                dialog_konf_doc(id_doc_update)
+            
+widget_doc_sumber()
 ########################################################################
 ##                     Dokumen Feedback                               ##
 ########################################################################
 
-st.divider()
-st.title("Document Feedback")
+@st.fragment
+@st.dialog(title= "Yakin ingin menghapus?")
+def dialog_konf_feedback(id_role):
+    if st.button("Yakin"):
+        delete_feedback_docs(id_role)
+        st.rerun()
 
-with st.container(height=120):
-    selected_role_feed = st.selectbox("Role", options=roles, key="asdasudhau")
 
-doc_feeds = get_feedback_doc()
+@st.fragment
+def widgt_doc_feedback(roles):
+    st.divider()
+    st.title("Document Feedback")
 
-id_role_to_feed = None
-if selected_role_feed is not '--pilih--':
-        for i in doc_feeds:
-            if selected_role_feed == i['name']:
-                # st.popover(i['title'])
-                st.caption(f"Nama file : {i['title']}")
-                feedback_doc = st.file_uploader(label="feedback doc", type="pdf")
-                id_role_to_feed = i['id_role']
-                if st.button(f"update {i['name']}"):
-                    if feedback_doc is not None:
+    with st.container(height=120):
+        opt = []
+        for key, val in enumerate(roles):
+            opt.append(next(iter(val))) 
+        selected_role_feed = st.selectbox("Role", options=opt, key="asdasudhau")
+
+    
+    id_role_to_feed = None
+    if selected_role_feed is not '--pilih--':
+            for i in roles:
+                if selected_role_feed == next(iter(i)):
+                    id_role_to_feed = i[selected_role_feed]
+            doc_feeds = get_feedback_doc_by_id(id_role_to_feed)
+            
+            if doc_feeds is not None:
+                st.caption(f"Nama file : {doc_feeds['title']}") 
+            else:
+                st.warning("⚠ Data Masih Kosong! Silahkan Tambahkan")
+            
+            docs = docx.Document()
+            bad_data = get_bad_feedback(id_role=id_role_to_feed)
+            if isinstance(bad_data, str):
+                    pass
+            else:
+                    for i in range(len(bad_data)):
+                            docs.add_paragraph("").add_run(f"{i+1}. Query : ").bold = True
+                            docs.add_paragraph(bad_data[i]['human_query'])
+                            docs.add_paragraph("").add_run(f"Your Rejected Response : ").bold = True
+                            docs.add_paragraph(bad_data[i]['ai_respon'])
+                            docs.add_paragraph("").add_run(f"Your Chosen Response : ").bold = True
+                            docs.add_paragraph("<EOS>")
+                            
+                    # Simpan dokumen ke dalam memori
+                    buffer = BytesIO()
+                    docs.save(buffer)
+                    buffer.seek(0)
                         
-                        upload_document_feedback(feedback_doc, i['id_role'])
-                    else:
-                        st.toast("❗ Please select a Document")
-        
-        docs = docx.Document()
+                    st.download_button(
+                                label="Unduh feedback user",
+                                data=buffer,
+                                file_name=f"dokumen_revisi_{selected_role_feed}.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
+            
+            feedback_doc = st.file_uploader(label="Upload feedback document", type="pdf")
+            
+            kol1, kol2 = st.columns([0.2, 0.8], gap="small")
+            with kol1:
+                if kol1.button(f"✏ Upload {selected_role_feed}"):
+                            if feedback_doc is not None:
+                                upload_document_feedback(feedback_doc, id_role_to_feed)
 
-        bad_data = get_bad_feedback(id_role=id_role_to_feed)
-        if isinstance(bad_data, str):
-            pass
-        else:    
-            txt = ""
-            for i in bad_data:
-                    txt += f"Query:\n{i['human_query']}\n\nYour Rejected Response:\n{i['ai_respon']}\n\nYour Chosen Response:\n\n<EOS>\n\n"
-            docs.add_paragraph(txt)
-            # Simpan dokumen ke dalam memori
-            buffer = BytesIO()
-            docs.save(buffer)
-            buffer.seek(0)
-                
-            st.download_button(
-                        label="Unduh file Word",
-                        data=buffer,
-                        file_name=f"dokumen_revisi_{selected_role_feed}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )              
-else:
-        st.warning("Pilih role yang valid!")    
-        selected_role_feed = None
+                            else:
+                                    st.toast("❗ Please select a Document")    
+            with kol2:
+                if kol2.button(f"🗑 Delete {selected_role_feed}", type="primary"):
+                        # st.warning("Yakin ingin menghapus ?")
+                        # delete_feedback_docs(id_role_to_feed)
+                        dialog_konf_feedback(id_role_to_feed)
+                                      
+    else:
+            st.warning("Pilih role yang valid!")    
+            selected_role_feed = None
 
+widgt_doc_feedback(roles_feed)
     
         
             
