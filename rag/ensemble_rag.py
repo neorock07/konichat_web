@@ -96,68 +96,6 @@ def load_downloaded_file_byId(role):
 #             e.g: {'manager': [['isi konten A....'], ['isi konten B....']]}    
 # """
 
-# @st.cache_data
-# def chunked_doc(_embed, _llm,):
-#     full_pdf = ""
-#     pdfs = None
-#     chunk_eos = EOSSplitter(chunk_size=1200, chunk_overlap=300)
-#     # """
-#     #     kode untuk memproses chunk sumber documents
-#     # """
-#     doc_chunked: dict[int, list[Document]] = {}
-#     doc_path, roles, doc_feedback_path = load_downloaded_file()
-#     roles = list(roles)
-    
-#     # Mengelompokkan dokumen berdasarkan role
-#     group_doc = {}
-#     for i in range(len(doc_path)):
-#         if roles[i] not in group_doc:
-#             group_doc[roles[i]] = []
-#         group_doc[roles[i]].append(doc_path[i])      
-    
-#     # Membagi dokumen menjadi chunk dan menyimpannya di doc_chunked
-#     for i in group_doc:
-#         documents: list[Document] = []
-#         for j in group_doc[i]:
-#             docs = load_pdf_data(file_path=j)
-#             ##############################################
-#             #              troubleshoot                  #
-#             ##############################################
-#             # for g in docs:
-#             #     full_pdf += g.page_content
-#             # pdfs = full_pdf.split("<EOS>")
-#             # for mj in pdfs:
-#             #     logger.debug(mj+"\n\n")
-            
-#             documents.extend(chunk_eos.split_documents(documents=docs))  
-#             # documents.extend(split_docs(_documents=docs, _chunk_size=1000, _chunk_overlap=200))  
-#         if i not in doc_chunked:
-#             doc_chunked[i] = []
-        
-#         # Menggunakan extend agar tidak membuat list di dalam list
-#         doc_chunked[i].extend(documents)
-    
-#     # Membuat embeddings untuk setiap dokumen yang sudah di-chunk
-#     for i in doc_chunked:
-#         create_embeddings(_llm, doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
-    
-#     ############################################################
-#     #               Chunk Document Feedback                   #
-#     ##########################################################
-    
-#     dict_feed:dict[str, list[Document]] = {}
-#     if doc_feedback_path is not [] or doc_feedback_path is not None:
-#         # Membuat chunk untuk document feedback
-#         for i in doc_feedback_path:
-#             doc_feed = load_pdf_data(file_path = i['path'])
-#             feed_chunked = split_docs(_documents = doc_feed, _chunk_size=1500, _chunk_overlap=400, separator=["<EOS>"])
-#             dict_feed[i['role_name']] = feed_chunked
-#             # membuat embedding untuk dokumen revisi feedback
-#             create_embeddings(_llm, feed_chunked, _embed, storing_path=f"vectorstore_feedback_{i['role_name']}")    
-            
-#     return doc_chunked, dict_feed   
-
-
  
 @st.cache_data
 def chunked_doc(_embed, _llm,):
@@ -185,17 +123,15 @@ def chunked_doc(_embed, _llm,):
         for j in group_doc[i]:
             docs = load_pdf_data(file_path=j)
             ##############################################
-            #              troubleshoot                  #
+            #              split document sumber         #
             ##############################################
             for g in docs:
                 full_pdf += g.page_content
             pdfs = full_pdf.split("<EOS>")
             for mj in pdfs:
                 list_pdf_content.append(mj)
-                # logger.debug(mj+"\n\n")
             
             documents.extend(list_pdf_content)  
-            # documents.extend(split_docs(_documents=docs, _chunk_size=1000, _chunk_overlap=200))  
         if i not in doc_chunked:
             doc_chunked[i] = []
         
@@ -204,18 +140,18 @@ def chunked_doc(_embed, _llm,):
     
     # Membuat embeddings untuk setiap dokumen yang sudah di-chunk
     for i in doc_chunked:
-        # create_embeddings(_llm, doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
         create_embeddings_by_texts(doc_chunked[i], _embed, storing_path=f"vectorstore_{i}")
     ############################################################
     #               Chunk Document Feedback                   #
     ##########################################################
     
     dict_feed:dict[str, list[Document]] = {}
+    chunk_eos = EOSSplitter(chunk_size=1200, chunk_overlap=300)
     if doc_feedback_path is not [] or doc_feedback_path is not None:
         # Membuat chunk untuk document feedback
         for i in doc_feedback_path:
             doc_feed = load_pdf_data(file_path = i['path'])
-            feed_chunked = split_docs(_documents = doc_feed, _chunk_size=1500, _chunk_overlap=400, separator=["<EOS>"])
+            feed_chunked = chunk_eos.split_documents(_documents = doc_feed, _chunk_size=1500, _chunk_overlap=400)
             dict_feed[i['role_name']] = feed_chunked
             # membuat embedding untuk dokumen revisi feedback
             create_embeddings(_llm, feed_chunked, _embed, storing_path=f"vectorstore_feedback_{i['role_name']}")    
@@ -243,34 +179,10 @@ def generate_stream_tokens(llm, question):
 @st.cache_data
 def init_rag():
     global rag_dic
-     
-    templateSystem = """
-        ### Instruction
-        Anda adalah asisten yang dapat diandalkan dan penuh hormat. Nama Anda KoniChat. Anda harus menjawab \
-        pertanyaan hanya menggunakan konteks yang diberikan kepada Anda, tetapi asumsikan ini adalah pengetahuan asli Anda. Jika Anda tidak tahu jawabannya, \
-        katakan saja maaf, saya tidak tahu. Jangan mencoba mengarang jawaban. di akhir jawabanmu, kamu harus bertanya apakah jawabanmu bermanfaat atau tidak.\
-        jika membantu kamu harus mengungkapkan kebahagiaanmu, sebaliknya kamu harus meminta maaf.\
-        jika anda bertanya tentang apa yang dapat anda lakukan, katakanlah saya membantu menjawab pertanyaan anda terkait dengan peraturan di perusahaan Konimex.
-        .mohon dijawab semua dalam bahasa indonesia atau bahasa inggris jika pertanyaan menggunakan salah satu bahasa tersebut dengan respon Empati.
-
-        ### Context:
-        {context}
-        """
-
-
-    templateContext = """
-        Given a chat history and the latest user question \
-        which might reference context in the chat history, formulate a standalone question \
-        which can be understood without the chat history.\
-        just reformulate it if needed otherwise return it as you have answer it.
-        """
-    
-    
-    # llm = ChatOllama(model="gemma2:9b", temperature=0, base_url="https://32b0-34-71-195-79.ngrok-free.app")
-    # llm = ChatOllama(model="gemma2:9b", 
+      
     llm = ChatOllama(model="gemma_8192:latest", 
                      temperature=0,
-                     base_url="https://c65a-34-142-188-148.ngrok-free.app")
+                     base_url="https://e736-35-190-141-3.ngrok-free.app")
     
     # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
@@ -282,53 +194,21 @@ def init_rag():
     
     if feed_chunked is {}:
         feed_chunked = None
-    #[OPTIONAL RE-RANK MAYBE FOR FUTURE USE]
-    # #re-rank document 
-    # compressor = FlashrankRerank()
-    # compression_retriever = ContextualCompressionRetriever(
-    #     base_compressor=compressor,
-    #     base_retriever=retriever
-    # )
         
-    #membuat template prompt untuk memberi tahu bahwa terdapat probabilitas 
-    #percakapan sebelumnya relevan untuk menjawab pertanyaan terkini (give context for model)
-    prompt_context = ChatPromptTemplate.from_messages(
-            [
-                ("system", templateContext),
-                MessagesPlaceholder(variable_name="chat_history"),
-                ("human", "{question}"),
-            ]
-        )
-    #template prompt untuk formatting query user sebelum di inputkan ke model 
-    qa_prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", templateSystem),
-                MessagesPlaceholder(variable_name="chat_history"),
-                ("human", "{question}"),
-            ]
-        )
-        
-     
-    context_chain = prompt_context | llm | StrOutputParser()     
-    #buat objek untuk contextualization     
-    util_context = Utils_context(context_chain=context_chain)   
-    
     return {
-        "util_context" : util_context.contextualization_question, 
-        "qa_prompt" : qa_prompt, 
         "llm" : llm,
         "chunked" : chunked,
         "feedback" : feed_chunked, 
         "embed" : embed
     }
     
+    
 # """
 #     fungsi untuk mendapatkan prediction words dari model LLM;
 #     params:
 #         role (str) : role user
-#         chunked (dict(list, Lit[Document])): dictionary hasil split document masing2 role;
-#         context_question : objek sebagai pengarah pemberian context chat history;
-#         qa_prompt: template prompt untuk memodifikasi pertanyaan user;
+#         chunked (dict(list, List[str])): dictionary hasil split document masing2 role;
+#         feed_chunked (dict(list, List[Document])): dictionary hasil split document feedback masing2 role;
 #         llm: model llm ChatOllama
 #         embed : model embedding
 #     returns:
@@ -337,14 +217,14 @@ def init_rag():
 ##   NOTE: kode digunakan di file app.py
 # """
   
-def invoke_rag(role, chunked, feed_chunked , context_question, qa_prompt, llm, embed):
+def invoke_rag(role, chunked, feed_chunked , llm, embed):
     # """
     #     chunk document sumber;
     # """
     chunk =  chunked
     to_chunk = chunk[role]
     st.toast(f"Your Role : {role}")
-    retriever = load_retriever(embed, role, to_chunk, llm )
+    retriever = load_retriever(embed, role, to_chunk )
     
     # """
     #     chunk document feedback
@@ -353,27 +233,11 @@ def invoke_rag(role, chunked, feed_chunked , context_question, qa_prompt, llm, e
     if feed_chunked is not None and role in feed_chunked:
         to_chunk_feed = feed_chunked[role]
         retriever_feedback = load_retriever_feed(embed, role, to_chunk_feed) 
-    #membuat pipeline hasil respon model
-        # """
-        #     - query user akan diformat sesuai template prompt yang sudah ada, 
-        #     - hasil format akan diinputkan ke model llm sebagai formatted query
-        #     - hasil generate respon model akan diparser(ubah) ke dalam bentuk string
-    # """
-    rag_chain = (
-    RunnablePassthrough.assign(
-        context=context_question | 
-        RunnableLambda(lambda question: retriever.invoke(
-            question, config={"configurable": {"search_kwargs_faiss": {"k": 3}}}
-        )) | format_docs
-    ) | qa_prompt | RunnableLambda(lambda context: generate_stream_tokens(llm, context))
-    )
         
     #dictionary untuk digunakan di function inference
     rag_dic = {
-            "rag_user" : rag_chain,
             "retriever" : retriever,
             "retriever_feed": retriever_feedback,
-            "prompt" : rag_chain.get_prompts(),
             "embed" :embed,
             "llm" : llm
         }

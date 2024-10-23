@@ -1,8 +1,6 @@
 import streamlit as st
 import logging
 from controller.auth_controller import login
-# from controller.cookies_controller import cookies 
-# import json
 
 logging.basicConfig(
     level=logging.DEBUG,  # Menentukan level logging
@@ -30,40 +28,20 @@ def handle_login(nik, password):
             st.session_state.logged_in = True
             st.session_state.user_data = text
             
-             #simpan data login ke cookies
-            # cookies["login_data"] = json.dumps(text)
-            # cookies.save()
-             
-            # st.success("sukses saved successfully")
             if text['name_role'] == 'admin':
                 st.switch_page("pages\\admin.py")
             else:
-                # st.switch_page("pages\\bento.py")
-                st.switch_page("pages\\app.py")
-                    
+                st.switch_page("pages\\app.py")                    
         else:
             st.toast("❌ Login Gagal")
     else:
         st.warning("Mohon isi dengan format yang sesuai!")                    
 
-# st.set_page_config(page_title="Konichat | login", page_icon="assets/fav.png")
 col_title, col_img = st.columns(2)
 col_title.title("Login Konichat")
 col_title.subheader("Silahkan login untuk mengakses Konichat", divider="rainbow")
 col_img.image(image="assets/fav.png")
-
-
-# if "login_data" in cookies:
-#     data_cookies = json.loads(cookies["login_data"]) 
-#     # st.session_state.rag_init = True
-#     st.session_state.user_data = data_cookies
-#     if data_cookies['name_role'] == 'admin':
-#         st.switch_page("pages\\admin.py")
-#     else:
-#         st.switch_page("pages\\app.py")
-    
-        
-# else:    
+            
 with st.form('form'):
     nik = st.text_input(label="nik", type="default")
     password = st.text_input(label="password", type="password")

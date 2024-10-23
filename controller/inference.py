@@ -45,18 +45,6 @@ templateSystem = """
         Semua jawaban harus dalam BAHASA INDONESIA dan menggunakan bahasa yang sopan.   
         ### Context:
         """
-# templateSystem = """
-#         ### Instruction
-#         Anda adalah asisten yang dapat diandalkan dan penuh hormat. Nama Anda KoniChat. Anda harus menjawab \
-#         pertanyaan hanya menggunakan konteks yang kamu miliki sebagai pengetahuan. Jika Anda tidak tahu jawabannya, \
-#         katakan saja maaf, saya tidak tahu. Jangan mencoba mengarang jawaban. di akhir jawabanmu, kamu harus bertanya apakah jawabanmu bermanfaat atau tidak.\
-#         jika membantu kamu harus mengungkapkan kebahagiaanmu, sebaliknya kamu harus meminta maaf.\
-#         jika anda bertanya tentang apa yang dapat anda lakukan, katakanlah saya membantu menjawab pertanyaan anda terkait dengan peraturan di perusahaan Konimex.
-#         .mohon dijawab semua dalam BAHASA INDONESIA dengan sopan.
-     
-#         ### Context:
-#         """
-
 
 templateContext = """
         berikut percakapan kita sebelumnya, 
@@ -64,11 +52,6 @@ templateContext = """
         ### chat_history:
         """
         
-# templateFallback = """
-#     berikut adalah feedback saya dari beberapa pertanyaan sebelumnya.
-#     ABAIKAN apabila KOSONG.
-#     ### feedback: 
-# """
 templateFallback = """
     berikut adalah feedback dari jawaban kamu pada `query` saya sebelumnya.
     GUNAKAN `chosen response` hanya jika konteks yang diberikan tidak dapat menjawab `query` saya.
@@ -172,57 +155,7 @@ def inference(rag, input:Prompt):
                 list_final_doc.append(formatted_text)
                 
             logger.debug(final_doc)
-            ########################################################
-            #                  FIND WORD                           #
-            ########################################################
-            # doc_filtered = FAISS.from_texts(list_final_doc, embed)
-            # doc_filtered.k = 5
-            # fix_ret = doc_filtered.max_marginal_relevance_search(query, lambda_mult=0.25)
-            # for res in fix_ret:
-            #     count +=1
-            #     # print(f"* [SIM={score:3f}] {res.page_content} [{res.metadata}]")
-            #     final_sumber_doc += f"index {count}:\n\n{res.page_content} \n\n"
-            
-            
-            
-            #re-rank document
-            # doc_filtered = FAISS.from_texts(list_final_doc, embed)
-            # vector_filter_retrieve = doc_filtered.as_retriever(search_type="similarity",
-            #                                 search_kwargs={'k': 3})
-            
-            # bm25 = BM25Retriever.from_texts(list_final_doc)
-            # bm25.k = 3
-            # retrievers = [
-            # # RunnableLambda(lambda q: hyde_retriever.get_relevant_documents(q)),  
-            # bm25,  
-            # vector_filter_retrieve
-            # ]
-            # ensemble_retrieve = EnsembleRetriever(retrievers=retrievers, weights=[0.3,0.7])
-            
-            # final_doc = ensemble_retrieve.get_relevant_documents(query)
-            
-            
-            
-            # compressor = FlashrankRerank()
-            # logger.debug("sudah flash rank")
-            # compression_retriever = ContextualCompressionRetriever(
-            #     base_compressor=compressor,
-            #     base_retriever=ensemble_retrieve
-            # )
-            
-            
-            # ranked_docs = compression_retriever.get_relevant_documents(query)
-            # final_sumber_doc = ""
-            # count = 0
-            # for i in ranked_docs:
-            #     # pre_word = str(i.page_content).replace('•', '\n')
-            #     pre_word = str(i.page_content).replace('', '\n•')
-            #     count += 1                    
-            #     # post_word = re.sub(r'\d+\.\d+\.\d+', '\n', pre_word)
-            #     # final_sumber_doc += f"{pre_word}\n\n"
-            #     final_sumber_doc += f"index {count}:\n\n{pre_word} \n\n"
-            #     # list_final_doc.append(pre_word)
-            
+    
             ###################################################################
             #      mencari history pertanyaan yang relevan untuk fine-tuning  #
             ###################################################################
@@ -252,33 +185,10 @@ def inference(rag, input:Prompt):
                                      llm)
          
             
-            # ai_response = get_str_stream(respon)
-            # respon = stream_response(final_sumber_doc + "\n" + query, rag['rag_user'])
-            #################################################################
-            ################################################################
-            
-            # respon = rag['rag_user'].invoke(
-            #             {
-                            
-            #                 "question": final_sumber_doc + "\n" + query,
-            #                 "chat_history": chat_history,
-                            
-            #             }
-            #         )
                      
             if len(chat_history) >= 10:
                     chat_history.pop(0)
-            # else:
-            #         # """
-            #         #     tambahkan percakapan ke history model
-            #         # """
-     
-            #         chat_history.extend(
-            #                 [
-            #                     f"human question : {query}",
-            #                     f"your answer : {ai_m}" 
-            #                 ]
-            #             )
+            
             # """
             #     hitung lama respon model 
             # """           
@@ -287,5 +197,4 @@ def inference(rag, input:Prompt):
             logger.debug(f"len {len(doc_retrieve)} | dokumen ret : {doc_retrieve[0].page_content}")
             logger.debug(f"fallback : {source_fallback}")
     return respon, doc_retrieve, final_sumber_doc, response_time
-    # return respon.content, response_time
     

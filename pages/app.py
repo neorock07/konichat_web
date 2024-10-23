@@ -2,9 +2,7 @@ import streamlit as st
 from streamlit_feedback import streamlit_feedback
 import logging
 from datetime import datetime
-
-from sympy import comp
-from rag.ensemble_rag import init_rag, chunked_doc, invoke_rag
+from rag.ensemble_rag import init_rag, invoke_rag
 import uuid
 from controller.feedback_method import feedback
 from modelMsg.message_model import Message
@@ -60,16 +58,18 @@ if 'user_data' in st.session_state:
     if 'rag_init' not in st.session_state:
         st.session_state.rag_init = True
         with st.spinner("membuat sesi baru..."):
-           
+            # """
+            #     Assign hasil proses Embedding Dokumen ke invoke_rag 
+            #     yang akan dipanggil setiap inferensi.
+            # """
             rag_chain = invoke_rag(
                 role=data_login['name_role'],
                 chunked=def_rag['chunked'],
                 feed_chunked=def_rag["feedback"],
-                context_question=def_rag['util_context'], 
-                qa_prompt=def_rag['qa_prompt'],
                 llm=def_rag['llm'], 
                 embed=def_rag['embed'] 
                 )
+           
             
             st.session_state.rag_chain = rag_chain
         logger.debug(f"RAG SEDANG INIT | {rag_chain.__class__}")
@@ -82,10 +82,6 @@ if 'user_data' in st.session_state:
 # """
 else:
     st.switch_page("login.py")    
-
-
-if "copied" not in st.session_state: 
-    st.session_state.copied = ""
 
     
 ai_respon:str = ""
@@ -141,12 +137,15 @@ if st.sidebar.button("New Chat ✒"):
     
 st.sidebar.subheader("History Chat")
 st.sidebar.divider()
+
 # """
 #     UI chat text-field
 # """
 prompt: str = st.chat_input("chat disini!")
 
-
+# """
+#     id untuk widget feedback
+# """
 if 'run_id' not in st.session_state:
     st.session_state.run_id = uuid.uuid4().hex
 
@@ -207,12 +206,7 @@ def print_log(msg):
         for id, data in enumerate(result):
             st.session_state[MESSAGES].append(Message(actor=USER, payload=data['human_query']))
             st.session_state[MESSAGES].append(Message(actor=AI, payload=data['ai_respon'])) 
-            # history_prev.extend(
-            #     [
-            #         f"human question : {data['human_query']}",
-            #         f"your answer : {data['ai_respon']}",
-            #     ]
-            # )
+           
             history_prev.append(
                                 {
                                     "human_question" : data['human_query'],
@@ -252,9 +246,7 @@ def widget_feedback():
                                         optional_text_label="Berikan ulasanmu!", 
                                         align="flex-start", 
                                         key='fb_k', 
-                                        # on_submit=handle_feedback
                                         )
-            # st.info(feedbck)
         st.form_submit_button('Save feedback', on_click=handle_feedback)
                    
 @st.fragment     
@@ -317,29 +309,14 @@ if prompt:
                                     "your_answer" : ai_m 
                                 }
                             )
-        # chat_history.extend(
-        #                         [
-        #                             f"human question : {human_query}",
-        #                             f"your answer : {ai_m}" 
-        #                         ]
-        #                     )
+      
         # """
         #     menjaga agar hanya menampung 5 history percakapan
         # """
         if len(chat_history) > 5:
             chat_history = chat_history[:5]
-        list_temp = ""
-        for x in chat_history:
-            list_temp += f"human : {x['human_question']}\n\nbot : {x['your_answer']}" 
-        st.info(list_temp)
-      
-        # """
-        #     button untuk copy jawaban chatbot
-        # """    
-        # st.button("📄", on_click=on_copy_click, args=(ai_m, ))
-        # copy_button(ai_m)    
+       
         st.session_state[MESSAGES].append(Message(actor=AI, payload=ai_m))
-        # st.session_state.sumber_final.append(final_doc)    
             # """
             #     cek sesi apakah sudah dibuat dan apakah sudah de-aktif,
             #     simpan jika masih kondisi true.
@@ -378,22 +355,11 @@ if prompt:
                 st.session_state.message_ai.clear()
                 
             # """
-            #     get new history chat dari percakapan terkini
+            #     get new history session dari percakapan terkini
             # """        
         chat_list = get_session_experimental(id=data_login['id'])
                 
-            
             # """
             #     form feedback akan tampil setiap ai selesai merespon
             # """
-
-        # with st.form('form'):
-        #         feedbck = streamlit_feedback(feedback_type="thumbs",
-        #                                 optional_text_label="Berikan ulasanmu!", 
-        #                                 align="flex-start", 
-        #                                 key='fb_k', 
-        #                                 # on_submit=handle_feedback
-        #                                 )
-        #     # st.info(feedbck)
-        #         st.form_submit_button('Save feedback', on_click=handle_feedback)
         widget_feedback()                

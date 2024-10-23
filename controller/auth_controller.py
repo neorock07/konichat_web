@@ -48,9 +48,6 @@ def logout():
     st.session_state.logged_in = False
     st.toast("👋 Logged out successfully!")
     time.sleep(2)
-    #hapus cookies
-    # if "login_data" in cookies:
-    #     cookies.clear()
     st.switch_page("login.py")
     
     

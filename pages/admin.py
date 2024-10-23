@@ -1,4 +1,3 @@
-from httpx import delete
 import streamlit as st
 from controller.document_controller import delete_docs, upload_document
 from controller.document_controller import update_document
@@ -9,13 +8,14 @@ from controller.document_controller import delete_docs,delete_feedback_docs
 from datetime import datetime
 import docx
 from io import BytesIO
-import os
-import subprocess
 import streamlit as st
-import pyautogui
-import time
 
 st.set_page_config("KoniChat | Admin", page_icon="assets/fav.png")
+
+if 'user_data' in st.session_state:
+    data_login = st.session_state.user_data
+else:
+    st.switch_page("login.py")        
 
 st.header("Chatbot Performance")
 
@@ -211,7 +211,7 @@ def widgt_doc_feedback(roles):
                             else:
                                     st.toast("❗ Please select a Document")    
             with kol2:
-                if kol2.button(f"🗑 Delete {selected_role_feed}", type="primary"):
+                if kol2.button(f"🗑 Delete {selected_role_feed}", type="primary", key="jijiji"):
                         # st.warning("Yakin ingin menghapus ?")
                         # delete_feedback_docs(id_role_to_feed)
                         dialog_konf_feedback(id_role_to_feed)
@@ -223,51 +223,3 @@ def widgt_doc_feedback(roles):
 widgt_doc_feedback(roles_feed)
     
         
-            
-    
-################################
-##       REBOOT               ##
-################################       
-
-
-# def reboot_streamlit():
-#     # Gunakan subprocess untuk menjalankan ulang aplikasi Streamlit
-#     current_file_path = os.path.abspath(__file__)
-
-#     # Mendapatkan path ke direktori root_project (satu folder ke atas dari folder 'controller')
-#     root_project_path = os.path.dirname(os.path.dirname(current_file_path))
-
-#     # Mendapatkan path absolut ke login.py
-#     login_path = os.path.join(root_project_path, 'login.py') # File Python yang sedang berjalan
-#     command = f"streamlit run {login_path}"
-#     subprocess.Popen(command, shell=True)
-#     st.stop()
-
-def reboot_streamlit():
-    # Tentukan port yang digunakan Streamlit (8501)
-    port = 8501
-
-    # Dapatkan path ke file yang ingin dijalankan ulang
-    current_file_path = os.path.abspath(__file__)
-    root_project_path = os.path.dirname(os.path.dirname(current_file_path))
-    login_path = os.path.join(root_project_path, 'login.py')
-     # Memberikan waktu sejenak sebelum melakukan penekanan Ctrl+C
-    time.sleep(1)  # Memberi jeda sebelum simulasi Ctrl+C
-    
-    # Simulasi Ctrl+C untuk menghentikan server Streamlit
-    pyautogui.hotkey('ctrl', 'c')
-
-    # Memberikan waktu agar server dapat berhenti sepenuhnya
-    time.sleep(60)    
-    # Jalankan kembali Streamlit di port yang sama
-    command = f"streamlit run {login_path} --server.port {port}"
-    subprocess.Popen(command, shell=True)
-
-    # Hentikan eksekusi Streamlit saat ini
-    st.stop()
-# if st.button("Restart App"):
-#     reboot_streamlit()
-
-st.sidebar.divider()            
-if st.sidebar.button("Restart", use_container_width=True, type="primary"):
-    reboot_streamlit()
