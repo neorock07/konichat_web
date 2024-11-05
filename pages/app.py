@@ -157,14 +157,16 @@ MESSAGES = "messages"
 st.sidebar.markdown(f"<p style='font-size:60px;' >{data_login['username']}</p>", unsafe_allow_html=True)
 st.sidebar.markdown("KoniChat | Chat").caption("KoniChat can make mistakes. Check important info.")
 if st.sidebar.button("New Chat 🌝"):
-    st.toast("new chat")
+    st.toast("🚀Starting New Chat")
+    # st.rerun()
     st.query_params['c'] = "automodel"
     cookies["message"] = ""
     st.session_state[MESSAGES].clear()
     del st.session_state.session_id
     st.session_state.isSessionCreated = False
     del st.session_state.isSessionCreated
-    
+    if st.query_params['c'] == 'automodel':
+        st.rerun()
     
 st.sidebar.subheader("History Chat")
 st.sidebar.divider()
@@ -235,8 +237,7 @@ if 'c' in st.query_params:
                      id_from_url = st.query_params['c']   
                      st.session_state.session_id = str(id_from_url).split("chat_history_")[1]
                     #  st.query_params['c'] = f"chat_history_{uuid.uuid4().hex}"
-            st.query_params['c'] = f"chat_history_{st.session_state.session_id}"
-                
+            st.query_params['c'] = f"chat_history_{st.session_state.session_id}"    
 
 if "message_ai" not in st.session_state:
     st.session_state.message_ai = []
@@ -281,8 +282,8 @@ def print_log(msg):
         #     tambahkan ke session messages untuk dirender
         #     ke bentuk chatbox.
         # """
-        if len(list(result)) > 0:
-            for id, data in enumerate(result):
+        if len(list(result['data'])) > 0:
+            for id, data in enumerate(result['data']):
                 st.session_state[MESSAGES].append(Message(actor=USER, payload=data['human_query']))
                 st.session_state[MESSAGES].append(Message(actor=AI, payload=data['ai_respon'])) 
             
@@ -376,7 +377,8 @@ if prompt:
         response, source_doc, final_doc,  time_respon = inference(st.session_state.rag_chain,
                                                                     Prompt(query=human_query, role=data_login['name_role'], 
                                                                         id=data_login['id']))
-          
+         
+       
             # """
             #     tampilkan hasil respon Ai ke widget UI (token per token);
             #     agar mendapatkan respon lebih cepat < 5 detik;

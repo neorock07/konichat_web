@@ -84,9 +84,11 @@ def inference(rag, input:Prompt):
         chat_history = st.session_state[st.session_state.id_sesi_prev]
     else:
         chat_history = st.session_state[f"chat_history_{st.session_state.session_id}"]     
+    
     if rag is None:
         return "error", 0  
     else:
+        
             start_time = time.time()
             respon = ""
             
@@ -101,6 +103,8 @@ def inference(rag, input:Prompt):
                 for x in chat_history[-2:]:
                     list_temp += f"{x['human_question']}\n\n" 
                 doc_retrieve = rag['retriever'].get_relevant_documents(list_temp + query)
+            
+            # st.toast("asline wes tekan kene urung!") 
                 
             doc_retrieve = rag['retriever'].get_relevant_documents(query)
             sumber_dc = ""
@@ -155,7 +159,7 @@ def inference(rag, input:Prompt):
                 list_final_doc.append(formatted_text)
                 
             logger.debug(final_doc)
-    
+
             ###################################################################
             #      mencari history pertanyaan yang relevan untuk fine-tuning  #
             ###################################################################
