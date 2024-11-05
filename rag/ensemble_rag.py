@@ -4,6 +4,7 @@ from .load_data import load_pdf_data
 from .utils_context import Utils_context
 import logging
 from langchain_community.chat_models.ollama import ChatOllama
+from langchain_community.chat_models.openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -126,7 +127,8 @@ def chunked_doc(_embed, _llm,):
             #              split document sumber         #
             ##############################################
             for g in docs:
-                full_pdf += g.page_content
+                # full_pdf += g.page_content
+                full_pdf += f"Metadata Dokumen: {g.metadata['source']}\n\n{g.page_content}\n\n" 
             pdfs = full_pdf.split("<EOS>")
             for mj in pdfs:
                 list_pdf_content.append(mj)
@@ -151,7 +153,7 @@ def chunked_doc(_embed, _llm,):
         # Membuat chunk untuk document feedback
         for i in doc_feedback_path:
             doc_feed = load_pdf_data(file_path = i['path'])
-            feed_chunked = chunk_eos.split_documents(_documents = doc_feed, _chunk_size=1500, _chunk_overlap=400)
+            feed_chunked = chunk_eos.split_documents(documents = doc_feed)
             dict_feed[i['role_name']] = feed_chunked
             # membuat embedding untuk dokumen revisi feedback
             create_embeddings(_llm, feed_chunked, _embed, storing_path=f"vectorstore_feedback_{i['role_name']}")    
@@ -179,10 +181,18 @@ def generate_stream_tokens(llm, question):
 @st.cache_data
 def init_rag():
     global rag_dic
-      
+    
+    # """
+    #     comment below code if you prefer to use OpenAI instead.
+    # """  
     llm = ChatOllama(model="gemma_8192:latest", 
-                     temperature=0,
-                     base_url="https://e736-35-190-141-3.ngrok-free.app")
+                     temperature=0.6,
+                     base_url="https://1dbf-34-81-224-63.ngrok-free.app")
+    
+    # """
+    #     uncomment this code if you use OpenAI services instead.
+    # """
+    # llm = ChatOpenAI(model="gpt-4", temperature=0, api_key="kx-shuhs")
     
     # membuat objek embedding dari model all-MiniLM-L6-v2 [HUGGING_FACE's Model]
     embed = load_embedding_model(model_path="all-MiniLM-L6-v2")
@@ -221,26 +231,31 @@ def invoke_rag(role, chunked, feed_chunked , llm, embed):
     # """
     #     chunk document sumber;
     # """
-    chunk =  chunked
-    to_chunk = chunk[role]
-    st.toast(f"Your Role : {role}")
-    retriever = load_retriever(embed, role, to_chunk )
-    
-    # """
-    #     chunk document feedback
-    # """
-    retriever_feedback = None
-    if feed_chunked is not None and role in feed_chunked:
-        to_chunk_feed = feed_chunked[role]
-        retriever_feedback = load_retriever_feed(embed, role, to_chunk_feed) 
-        
-    #dictionary untuk digunakan di function inference
-    rag_dic = {
-            "retriever" : retriever,
-            "retriever_feed": retriever_feedback,
-            "embed" :embed,
-            "llm" : llm
-        }
+    rag_dic = None
+    chunk =  chunked   
+    list_key = list(chunk.keys())
+    if role not in list_key:
+        st.toast("Tidak ada dokumen terkait!")
+    else:
+        to_chunk = chunk[role]    
+        st.toast(f"Your Role : {role}")
+        retriever = load_retriever(embed, role, to_chunk )
+                
+                # """
+                #     chunk document feedback
+                # """
+        retriever_feedback = None
+        if feed_chunked is not None and role in feed_chunked:
+            to_chunk_feed = feed_chunked[role]
+            retriever_feedback = load_retriever_feed(embed, role, to_chunk_feed) 
+                #dictionary untuk digunakan di function inference
+        rag_dic = {
+                        "retriever" : retriever,
+                        "retriever_feed": retriever_feedback,
+                        "embed" :embed,
+                        "llm" : llm
+                    }
+            
     return rag_dic
 
 

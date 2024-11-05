@@ -49,6 +49,3 @@ class EOSSplitter(TextSplitter):
                     split_docs.append(Document(page_content=chunk, metadata=doc.metadata))
         
         return split_docs   
-
-# class SplitterText:
-#     def split_eos(self, )    

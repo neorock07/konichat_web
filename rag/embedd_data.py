@@ -95,7 +95,7 @@ def load_retriever(embed, role, chunks):
     
      #buat retriever hyde dan vector retriever
     vector_retriver = vector_store.as_retriever(search_type="mmr",
-                                                search_kwargs={'k': 10, 
+                                                search_kwargs={'k': 15, 
                                                 'fetch_k': 30})   
     # wrap retriever sebagai Runnable
     retrievers = [
@@ -134,9 +134,6 @@ def load_retriever_feed(embed, role, chunks):
     vector_retriver = vector_store.as_retriever(
                                     search_type="similarity_score_threshold",
                                     search_kwargs={'score_threshold': 0.99},
-                                    # search_kwargs={"k": 1,
-                                    #             'lambda_mult': 0.25
-                                    #                }
                                     )
     
     # wrap retriever sebagai Runnable

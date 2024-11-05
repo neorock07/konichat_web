@@ -51,34 +51,18 @@ def generator_to_str(nested_generator) -> str:
 
 @st.fragment
 def generate_response(msg:Message, sumber, final_sumber ,time_respon:str):
-    # token_full = ""
     typing_area = st.empty()
-    # typing_speed = 0.01  # Kecepatan mengetik dalam detik per karakter
-    # displayed_text = ""
-    # for char in msg.payload:
-    #     displayed_text += char
-    #     typing_area.write(displayed_text)
-    #     time.sleep(typing_speed)
-    # with typing_area.chat_message(msg.actor, avatar="assets/fav.png").write(msg.payload)
-    
     with typing_area.chat_message(msg.actor, avatar="assets/fav.png"):
         token_full = typing_area.write_stream(msg.payload)
    
-    
     st.divider()    
     with st.expander("Sumber Dokumen"):
         st.write(final_sumber)
-    
-    # st.info(sumber)
-    # """
-    #     button copy message & container waktu response model
-    # """
-    # st.button("📄", on_click=on_copy_click, args=(msg.payload, )) if msg.actor == AI else None
+   
     annotated_text(
     ("waktu respon",f"{time_respon:.2f} s"),
     )
-    
-    
+     
     return token_full
 
 # """
@@ -183,12 +167,28 @@ def get_session_experimental(id:str):
             return response.json()['data']
         else:
             st.toast("❌ Gagal memulihkan chat")
-            return response
+            return None
 
     except Exception as e:
            logging.exception(e)   
+
+# """
+#     function untuk mendapatkan data percakapan pada sesi tertentu;
+#     params:
+#      id (str) -> id_session
+ # """
+    #     pengecekan dilakukan untuk memastikan keamanan chat dari
+    #     kebocoran data chat pada skenario user mengakses url chat 
+    #     dari akun lain.
+    #     misal:
+    #        pemilik akun manager membuka chat dengan url tertentu, 
+    #        kemudian akun karyawan mencoba untuk mengakses url chat 
+    #        manager tersebut. agar data chat dari manager tidak dapat
+    #        diakses oleh karyawan maka ditambahkan mekanisme kode berikut.
+    # """
+# """
                    
-def get_conversation_by_id(id:str):
+def get_conversation_by_id(id:str, id_user_logged_in:int):
     data = {
         "id_session" : id
         }
@@ -202,16 +202,35 @@ def get_conversation_by_id(id:str):
             
          # Memeriksa apakah request berhasil
         if response.status_code == 200:
-                # Mengambil respons JSON
-            st.toast("✅ Berhasil memulihkan chat")
-            logger.debug(f"sesi : {response.json()}")
-            return response.json()['data']
+            # Mengambil respons JSON
+            data = response.json()
+            # data = response.json()['data']
+            
+            if data['data'][0]['id_user'] == id_user_logged_in:    
+                st.toast("✅ Berhasil memulihkan chat")
+                logger.debug(f"sesi : {response.json()}")
+            else:
+                data = {"data":[]}
+            logger.debug(f"yang di return  : {data}")    
+            return data
+            # return response.json()['data']
         else:
             st.toast("❌ Gagal memulihkan chat")
             return response
 
     except Exception as e:
            logging.exception(e)           
+
+# """
+#     function untuk menyimpan data session terkini,
+#     ini berguna untuk mengarahkan data chat disimpan berdasarkan id_session 
+#     yang disimpan melalui function ini;
+    
+#     misal:
+#        simpan id_session chat_history_23233242342
+#        maka query user dan respon Bot akan disimpan dengan
+#        id_session tersebut sebagai foreign key.
+# """
 
 def save_session_experimental(data:SessionModel):
     id_session = data.id_session

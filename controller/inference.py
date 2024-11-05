@@ -73,8 +73,8 @@ templateFallback = """
 @st.fragment       
 def inference(rag, input:Prompt):
     query = input.query
-    role = input.role
-    id = input.id
+    # role = input.role
+    # id = input.id
     llm = rag['llm']
     # """
     #     cek apakah melanjutkan previous chat, atau mulai baru;
