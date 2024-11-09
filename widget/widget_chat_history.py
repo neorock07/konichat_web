@@ -15,7 +15,7 @@ def load_chat_history(url_params, id_user, id_session_history):
         function untuk mendapatkan data histori chat terdahulu 
         berdasarkan id_user yang sedang login pada session ini.
         
-        - **params**:
+        Args:
                - url_params (str): alamat id histori chat e.g : `chat_history_3947hjdadaadas`
                - id_user (str) : id_user dari cookies atau data login.
                - id_session_history [list] : list kosong untuk menampung history yang diterima.

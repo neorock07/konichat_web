@@ -1,7 +1,14 @@
+from warnings import deprecated
 import requests
 import logging
 import streamlit as st
+
+@deprecated
 class ModelController:
+    """
+        Un-used controller, 
+        develop it or remove it.
+    """
     
     logging.basicConfig(
     level=logging.DEBUG,  # Menentukan level logging
@@ -37,3 +44,4 @@ class ModelController:
     def handle_feedback(self):  
         st.write(st.session_state.fb_k)
         st.toast("✔️ Feedback received!")        
+                

@@ -6,11 +6,12 @@ AI = "assistant"
 MESSAGES = "messages"
 def widget_chat():
     """
-        function untuk membuat widget chatbox
-        - **params**:
-            -
-        - **returns**:
-            prompt (str) : prompt user yang diketik di widget ini.     
+    function untuk membuat widget chatbox.
+    
+    Args :
+        -
+    Returns :
+        - prompt (str) : prompt user yang diketik di widget ini.     
     """
     
     if st.session_state.rag_chain is not None:

@@ -20,11 +20,20 @@ logger = logging.getLogger(__name__)
 
 
 def generate_tokens(llm, question):
+    """
+        Function untuk mendapatkan respon dari model 
+        melalui skema token by token request.
+    """
     for chunks in llm.stream(question):
         yield chunks
     
 st.session_state.message_ai = []
 def generate_stream(query, llm):
+    """
+        Function untuk mengeluarkan setiap token (`yield`), 
+        dan menyimpannya ke session yang nanti di file `app.py`
+        akan digabungkan menjadi satu `string`.
+    """
     # To collect all streamed data
     for chunk in generate_tokens(llm, query):
         st.session_state.message_ai.append(chunk)
@@ -60,18 +69,20 @@ templateFallback = """
     ### feedback: 
 """
 
-# """
-#     function untuk inference model, untuk melakukan conversation ke model.
-#     params:
-#         rag (Any) : isi dengan objek hasil assign ke RunnablePassThrough dan ke model LLM
-#         input (Prompt) : field untuk menerima objek class Prompt sebagai pembungkus query ke model
-#     returns:
-#         respon (str) : hasil respon string model
-#         response_time (float) : lama waktu respon model
-# """
+
 
 @st.fragment       
 def inference(rag, input:Prompt):
+    """
+    function untuk inference model, untuk melakukan conversation ke model.
+    Args:
+        - rag (Any) : isi dengan objek hasil assign ke RunnablePassThrough dan ke model LLM
+        - input (Prompt) : field untuk menerima objek class Prompt sebagai pembungkus query ke model
+    Returns:
+        - respon (str) : hasil respon string model
+        - response_time (float) : lama waktu respon model
+    """
+    
     query = input.query
     # role = input.role
     # id = input.id
@@ -197,8 +208,8 @@ def inference(rag, input:Prompt):
             #     hitung lama respon model 
             # """           
             response_time = time.time() - start_time
-            logger.debug(f"history : {chat_history}")
-            logger.debug(f"len {len(doc_retrieve)} | dokumen ret : {doc_retrieve[0].page_content}")
-            logger.debug(f"fallback : {source_fallback}")
+            # logger.debug(f"history : {chat_history}")
+            # logger.debug(f"len {len(doc_retrieve)} | dokumen ret : {doc_retrieve[0].page_content}")
+            # logger.debug(f"fallback : {source_fallback}")
     return respon, doc_retrieve, final_sumber_doc, response_time
     

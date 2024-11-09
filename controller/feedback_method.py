@@ -1,4 +1,3 @@
-import datetime
 import requests
 import streamlit as st
 import logging
@@ -13,6 +12,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def feedback(tipe, feedback:str, ai_respon:str, query:str, role:int):
+    """
+        Function untuk mengirim data feedback ke server
+        melalui REST API.
+    """
     type = ""
     if tipe == "👎":
         type = "BAD"
