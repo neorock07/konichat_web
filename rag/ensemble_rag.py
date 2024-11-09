@@ -187,7 +187,7 @@ def init_rag():
     # """  
     llm = ChatOllama(model="gemma_8192:latest", 
                      temperature=0.6,
-                     base_url="https://ece1-34-127-10-173.ngrok-free.app")
+                     base_url="https://97e3-34-105-46-78.ngrok-free.app")
     
     # """
     #     uncomment this code if you use OpenAI services instead.

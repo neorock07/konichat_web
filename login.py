@@ -1,25 +1,25 @@
 import streamlit as st
 import logging
 from controller.auth_controller import login
-#############################
-##      coba cookies       ##
-#############################
 from streamlit_cookies_manager import EncryptedCookieManager
 import os
+from dotenv import load_dotenv
+from widget.load_cookies import load_cookies
+
 st.set_page_config("KoniChat | Login", page_icon="assets/fav.png")
 
-cookies = EncryptedCookieManager(
-    # This prefix will get added to all your cookie names.
-    # This way you can run your app on Streamlit Cloud without cookie name clashes with other apps.
-    prefix="konichat_chat",
-    # You should really setup a long COOKIES_PASSWORD secret if you're running on Streamlit Cloud.
-    password=os.environ.get("COOKIES_PASSWORD", "adhakshdkah3783432hjshfsdjfjsdfjsgfq393274sdjhfs"),
-)
+load_dotenv()
 
-if not cookies.ready():
-    # Wait for the component to load and send us current cookies.
-    st.spinner("wait cookies...")
-    st.stop()
+cookies = load_cookies()
+# cookies = EncryptedCookieManager(
+#     prefix="konichat_chat",
+#     password=os.environ.get("COOKIES_PASSWORD", "adhakshdkah3783432hjshfsdjfjsdfjsgfq393274sdjhfs"),
+# )
+
+# if not cookies.ready():
+#     # Wait for the component to load and send us current cookies.
+#     st.spinner("wait cookies...")
+#     st.stop()
 
 
 # if "konichat_chat" in dict(cookies.keys()) :
