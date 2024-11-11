@@ -37,12 +37,15 @@ rag_dic = None
 file_path_manager = None
 file_path_user = None
 
-# """
-#     mengambil seluruh data dokumen;
-#     tujuan : `mengambil data semua lalu process satu waktu`
-# """
 
 def load_downloaded_file():
+    """
+    **USE FOR INIT EMBEDDING DOCUMENTS**
+    
+    mengambil seluruh data dokumen;
+    - tujuan : `mendownload dokumen semua lalu process satu waktu`
+    
+    """
     global file_path_manager
     global file_path_user
     docs_all = get_all_docs()
@@ -68,38 +71,39 @@ def load_downloaded_file():
     return path_docs_dict, role_set, path_feed_doc
 
 
-# """
-#     DO NOT USE THIS FUNCTION   
-#     gunakan ini untuk mendownload 1 document sesuai role user yang login;    
-#     mengambil seluruh data dokumen;
-#     tujuan : `mengambil data sesuai role lalu process`
-#     cons : `time consume minim hanya 1 doc`
-# """
 
 def load_downloaded_file_byId(role):
+    """
+    **DO NOT USE THIS FUNCTION FOR INITIAL EMBEDDING PROCCESS**
+       
+    gunakan ini untuk mendownload 1 document sesuai role user yang login;    
+    mengambil seluruh data dokumen;
+    - tujuan : `mengambil data sesuai role lalu process`
+    - pros : `time consume minim hanya 1 doc`
+    """
     docs = get_by_id_docs(role)
     logger.debug(f"docs download : {docs}") 
     file_path = download_doc(docs['file'], docs['title'])
     return file_path
 
-# """
-#     fungsi untuk memproses embedding dokumen dan menyimpannya menjadi 
-#     objek FAISS untuk masing-masing role;
-#     e.g: role manager -> (docA, docB) -> vectorstore_manager.pkl
-#     proses ini disimpan dalam cache see: @st.cache_data;
-#     sehingga proses ini dilakukan hanya ketika kode aplikasi pertama kali dijalankan;
-#     note : agar caching dapat berjalan nama parameter diawali underscore e.g: _paramsA;
-#     params:
-#         _embed: model embedding untuk mengubah string to vector base;
-#         _llm: model text generation (ChatOllama);
-#     returns:
-#         doc_chunked (dict[int, list[Document]]): dictionary hasil split document masing-masing role;
-#             e.g: {'manager': [['isi konten A....'], ['isi konten B....']]}    
-# """
 
  
 @st.cache_data
 def chunked_doc(_embed, _llm,):
+    """
+    fungsi untuk memproses embedding dokumen dan menyimpannya menjadi 
+    objek FAISS untuk masing-masing role;
+    e.g: role manager -> (docA, docB) -> vectorstore_manager.pkl
+    proses ini disimpan dalam cache see: @st.cache_data;
+    sehingga proses ini dilakukan hanya ketika kode aplikasi pertama kali dijalankan;
+    note : agar caching dapat berjalan nama parameter diawali underscore e.g: _paramsA;
+    Parameters:
+        _embed (EmbeddingModel): model embedding untuk mengubah string to vector base;
+        _llm (ChatOllama): model text generation (ChatOllama);
+    Returns:
+        doc_chunked (dict[int, list[Document]]): dictionary hasil split document masing-masing role;
+            e.g: {'manager': [['isi konten A....'], ['isi konten B....']]}    
+    """
     
     # """
     #     kode untuk memproses chunk sumber documents
@@ -127,7 +131,6 @@ def chunked_doc(_embed, _llm,):
             #              split document sumber         #
             ##############################################
             for g in docs:
-                # full_pdf += g.page_content
                 full_pdf += f"Metadata Dokumen: {g.metadata['source']}\n\n{g.page_content}\n\n" 
             pdfs = full_pdf.split("<EOS>")
             for mj in pdfs:
@@ -160,11 +163,12 @@ def chunked_doc(_embed, _llm,):
             
     return doc_chunked, dict_feed    
 
-# """
-#     callback untuk ChatOllama class;
-# """
 
 class StreamingCallbackHandler(BaseCallbackHandler):
+    """
+    callback untuk ChatOllama class;
+    """
+    
     def __init__(self):
         self.partial_output = ""
 
@@ -173,13 +177,34 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         print(token, end="", flush=True)
         
         
-def generate_stream_tokens(llm, question):
-    for chunk in llm.stream(question):
-        yield chunk.content 
-
 
 @st.cache_data
 def init_rag():
+    """
+    Function yang akan dijalankan pertama kali setelah login ke sistem, 
+    untuk menjalankan proses embedding dokumen dan assign retriever ke 
+    masing-masing vector database pada setiap role user.
+    
+    Returns:
+        out (dictionary) : (
+        llm (ChatOllama),
+        chunked (Document / str),
+        feed_chunked  (Document), 
+        embed (EmbeddingModel)
+        )
+    Pada kode ini menggunakan model LLM dari Ollama, 
+    apabila ingin menggunakan model dari OpenAi maka uncomment 
+    kode :
+    
+    `llm = ChatOpenAI(model="gpt-4", temperature=0, api_key="kx-your api key")`
+    
+    dan comment kode :
+    
+    `llm = ChatOllama(model="gemma_8192:latest", 
+                     temperature=0.6,
+                     base_url="https://asdadsadsa.ngrok-free.app")`
+    """
+    
     global rag_dic
     
     # """
@@ -213,21 +238,26 @@ def init_rag():
     }
     
     
-# """
-#     fungsi untuk mendapatkan prediction words dari model LLM;
-#     params:
-#         role (str) : role user
-#         chunked (dict(list, List[str])): dictionary hasil split document masing2 role;
-#         feed_chunked (dict(list, List[Document])): dictionary hasil split document feedback masing2 role;
-#         llm: model llm ChatOllama
-#         embed : model embedding
-#     returns:
-#         rag_dic (dict)    
-#
-##   NOTE: kode digunakan di file app.py
-# """
   
 def invoke_rag(role, chunked, feed_chunked , llm, embed):
+    """
+    Function untuk memuat vector database dokumen dan assign retriever ke user berdasarkan role
+    user;
+    
+    Parameters:
+        role (str) : role user
+        chunked (dict(list, List[str])) : dictionary hasil split document masing2 role;
+        feed_chunked (dict(list, List[Document])) : dictionary hasil split document feedback masing2 role;
+        llm (ChatOllama) : model llm ChatOllama
+        embed (EmbeddingModel) : model embedding
+    Returns:
+        rag_dic (dict)    
+
+    **NOTE** :
+    
+    kode digunakan di file app.py
+    """
+    
     # """
     #     chunk document sumber;
     # """

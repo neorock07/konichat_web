@@ -6,17 +6,17 @@ from typing import (
 )
 from langchain_core.documents import BaseDocumentTransformer, Document
 
-# """
-    #     kode untuk chunk (memotong dokumen menjadi bagian-bagian yang lebih kecil)
-    #     params:
-    #         documents (List[document]): argument diisi dengan document yang sudah dimuat
-    #         chunk_size (int) : size pembagian data
-    #         chunk_overlap (int): besar data yang diskip (per-kata)
-    #     returns:
-    #         chunks (List[document]): objek hasil split dokumen    
-    # """
 
 def split_docs(_documents, _chunk_size, _chunk_overlap, separator=None):
+        """
+        kode untuk chunk (memotong dokumen menjadi bagian-bagian yang lebih kecil)
+        Parameters:
+            documents (List[document]): argument diisi dengan document yang sudah dimuat
+            chunk_size (int) : size pembagian data
+            chunk_overlap (int): besar data yang diskip (per-kata)
+        Returns:
+            chunks (List[document]): objek hasil split dokumen    
+        """
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=_chunk_size, 
             separators=separator,
@@ -27,6 +27,10 @@ def split_docs(_documents, _chunk_size, _chunk_overlap, separator=None):
     
 
 class EOSSplitter(TextSplitter):
+     """
+        Merupakan Class untuk chunking dokumen berdasarkan karakter tag `<EOS>`, 
+        yang telah disematkan pada dokumen.
+     """
     
      def split_text(self, text: str) -> List[str]:
         """Implementasi untuk memecah teks berdasarkan marker <EOS>."""

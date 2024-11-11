@@ -7,6 +7,11 @@ USER = "user"
 AI = "assistant"
 MESSAGES = "messages"
 def button_logout(cookies:EncryptedCookieManager):
+    """
+    Function untuk membuat button logout.
+    kode ini akan menghapus memory bot, menghapus cookies, dan non-aktifkan session terdahulu.
+    """
+    
     with st.sidebar:
         with st_fixed_container(mode="fixed", position="bottom", border=True, height=80, margin="bottom", key="asdasd"):
                 if st.button("Log out 📤", use_container_width=True):

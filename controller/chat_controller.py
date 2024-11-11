@@ -24,28 +24,26 @@ USER = "user"
 AI = "assistant"
 MESSAGES = "messages"
 
-"""
-    function untuk menampilkan ke bentuk chatbox jika respon ai.
-    
-    params:
-        msg (Message) : objek dari Message class, berisi actor dan payload message
-        time_respon (float) : jumlah waktu yang respon model dalam menjawab.
-    returns:
-        None    
-"""
 
 @st.dialog("Sumber Dokumen")
-def source_doc(item):
+def source_doc(item):    
     st.write(f"{item}")
     if st.button("Submit"):
         st.rerun()
     
 
 def generator_to_str(nested_generator) -> str:
+    """
+        **NOT USED, HAS BEEN CHANGED WITH ANOTHER CODE, 
+        SEE : `inference.py` and `app.py`.**
+        
+        Function to merge each token to be a string.
+    """
+    
     result = []
-    for generator in nested_generator:  # Iterate over the outer generator
-        for item in generator:  # Iterate over each inner generator
-            result.append(str(item.content))  # Convert each item to string and append
+    for generator in nested_generator:  
+        for item in generator:  
+            result.append(str(item.content))
     return ''.join(result) 
 
 

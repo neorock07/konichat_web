@@ -4,18 +4,19 @@ from langchain.chains.hyde.base import HypotheticalDocumentEmbedder
 from langchain.retrievers import BM25Retriever, EnsembleRetriever
 from langchain_core.runnables import ConfigurableField, RunnableLambda
 
-# """
-#         Kode untuk memuat model Embedding yang akan digunakan untuk 
-#         mengubah data hasil chunking/splitting menjadi dimensi embeddings (ruang vector)
 
-#         params:
-#             model_path (str): path model encoder embedding
-#             normalize_embedding (bool): default True 
-#         returns:
-#               objek HuggingFaceEmbeddings
-# """
 
 def load_embedding_model(model_path, normalize_embedding=True):
+        """
+        Kode untuk memuat model Embedding yang akan digunakan untuk 
+        mengubah data hasil chunking/splitting menjadi dimensi embeddings (ruang vector)
+
+        Parameters:
+            model_path (str): path model encoder embedding
+            normalize_embedding (bool): default True 
+        Returns:
+              HuggingFaceEmbeddings (HuggingFaceEmbeddings)
+        """     
         return HuggingFaceEmbeddings(
             model_name=model_path, 
             model_kwargs={'device':'cpu'},
@@ -24,21 +25,21 @@ def load_embedding_model(model_path, normalize_embedding=True):
             }
         )
         
-"""
-        kode untuk membuat embeddings (vector dari tiap chunk document),
-        dan disimpan ke vectorstore FAISS.
-        
-        params:
-            llm: model ChatOllama
-            chunks List[document]: document hasil chunk
-            embedding_model Embeddings: model yang digunakan untuk melakukan embedding data
-            storing_path: lokasi path penyimpanan vectorstore
-        returns:
-            vectorstore: hasil embeddings berupa data vector documents    
-    """    
+   
         
 def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
-    
+    """
+    kode untuk membuat embeddings (vector dari tiap chunk document),
+    dan disimpan ke vectorstore FAISS.
+        
+    Parameters:
+            llm (ChatOllama): model ChatOllama
+            chunks (List[document]): document hasil chunk
+            embedding_model (EmbeddingModel): model yang digunakan untuk melakukan embedding data
+            storing_path (str) : lokasi path penyimpanan vectorstore
+    Returns:
+            vectorstore: hasil embeddings berupa data vector documents    
+    """ 
     bm25 = BM25Retriever.from_documents(chunks)
     bm25.k = 10
     
@@ -47,21 +48,21 @@ def create_embeddings(llm, chunks, embedding_model, storing_path="vectorstore"):
     # Menyimpan retriever ke path lokal
     vector_retriver.save_local(storing_path)
 
-"""
-        kode untuk membuat embeddings (vector dari tiap chunk text),
-        dan disimpan ke vectorstore FAISS.
-        
-        params:
-            llm: model ChatOllama
-            chunks List[document]: document hasil chunk
-            embedding_model Embeddings: model yang digunakan untuk melakukan embedding data
-            storing_path: lokasi path penyimpanan vectorstore
-        returns:
-            vectorstore: hasil embeddings berupa data vector documents    
-    """    
-
+  
 
 def create_embeddings_by_texts(chunks, embedding_model, storing_path="vectorstore"):
+    """
+    kode untuk membuat embeddings (vector dari tiap chunk text),
+    dan disimpan ke vectorstore FAISS.
+        
+    Parameters:
+            llm (ChatOllama) : model ChatOllama
+            chunks (List[document]) : document hasil chunk
+            embedding_model (EmbeddingModel): model yang digunakan untuk melakukan embedding data
+            storing_path (str) : lokasi path penyimpanan vectorstore
+    Returns:
+            vectorstore: hasil embeddings berupa data vector documents    
+    """  
     retriever = FAISS.from_texts(chunks, embedding_model)
     
     bm25 = BM25Retriever.from_texts(chunks)
@@ -71,21 +72,19 @@ def create_embeddings_by_texts(chunks, embedding_model, storing_path="vectorstor
     retriever.save_local(storing_path)
     
 
-# """
-#         kode untuk load objek retriever sesuai dengan role user
-        
-#         params:
-#             embed: model yang digunakan untuk melakukan embedding data
-#             role (str) : role user
-#             chunks List[document]: document hasil chunk
-            
-            
-#         returns:
-#             vectorstore: hasil embeddings berupa data vector documents    
-#     """
-    
-
 def load_retriever(embed, role, chunks):
+    """
+    kode untuk load objek retriever sesuai dengan role user
+        
+    Parameters:
+            embed (EmbeddingModel): model yang digunakan untuk melakukan embedding data
+            role (str) : role user
+            chunks (List[document]): document hasil chunk
+            
+            
+    Returns:
+            vectorstore: hasil embeddings berupa data vector documents    
+    """
     vector_path = f"vectorstore_{role}"
     retriever = {}
     vector_store =  FAISS.load_local(vector_path, embed, allow_dangerous_deserialization=True)
@@ -110,19 +109,20 @@ def load_retriever(embed, role, chunks):
     return retriever[role]
 
 
-"""
-        kode untuk load objek retriever untuk doc. feedback sesuai dengan role user
-        
-        params:
-            embed: model yang digunakan untuk melakukan embedding data
-            role (str) : role user
-            chunks List[document]: document hasil chunk 
-            
-        returns:
-            vectorstore: hasil embeddings berupa data vector documents    
-    """
+
  
 def load_retriever_feed(embed, role, chunks):
+    """
+    kode untuk load objek retriever untuk doc. feedback sesuai dengan role user
+        
+    Parameters:
+            embed (EmbeddingModel): model yang digunakan untuk melakukan embedding data
+            role (str) : role user
+            chunks (List[document]): document hasil chunk 
+            
+    Returns:
+            vectorstore: hasil embeddings berupa data vector documents    
+    """
     retriever = {}
     vector_path = f"vectorstore_feedback_{role}"
     vector_store =  FAISS.load_local(vector_path, embed, allow_dangerous_deserialization=True)

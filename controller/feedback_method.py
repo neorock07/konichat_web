@@ -50,10 +50,12 @@ def feedback(tipe, feedback:str, ai_respon:str, query:str, role:int):
     except Exception as e:
            logging.exception(e)
 
-# """
-#     fungsi untuk mendapatkan jumlah feedback tipe Bad atau Good;
-# """           
-def get_count_feedback():    
+          
+def get_count_feedback():
+    """
+    fungsi untuk mendapatkan jumlah feedback tipe Bad atau Good;
+    """ 
+    
     # URL endpoint 
     url = 'http://127.0.0.1:8000/api/feedback/count'
         
@@ -73,13 +75,18 @@ def get_count_feedback():
     except Exception as e:
            logging.exception(e)
 
-# """
-#     fungsi untuk mengambil data feedback user yang tipe BAD,
-#     untuk digunakan sebagai bahan membuat dokumen revisi untuk 
-#     fine tuning;
-# """
 
-def get_bad_feedback(id_role:int):    
+def get_bad_feedback(id_role:int):   
+    """
+    fungsi untuk mengambil data feedback user yang tipe BAD,
+    untuk digunakan sebagai bahan membuat dokumen revisi untuk 
+    fine tuning;
+    
+    Args:
+        id_role (int) : id role user.
+    """
+
+     
     # URL endpoint 
     url = 'http://127.0.0.1:8000/api/feedback/get'
         

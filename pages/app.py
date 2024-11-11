@@ -143,7 +143,7 @@ st.sidebar.subheader("History Chat")
 st.sidebar.divider()
 
 # """
-#     UI chat text-field
+#    chatbox untuk tempat nge-prompt user
 # """
 
 prompt:str = widget_chat()    
@@ -288,7 +288,6 @@ if prompt:
                 chat_history = st.session_state[st.session_state.id_sesi_prev]
         else:
                 chat_history = st.session_state[f"chat_history_{st.session_state.session_id}"]
-                # st.query_params['c'] = f"chat_history_{st.session_state.session_id}"      
                 if 'c' in st.query_params:
                     if 'chat_history_' in st.query_params['c']:
                         id_from_url = st.query_params['c']   
@@ -321,7 +320,6 @@ if prompt:
             if 'isSessionCreated' in st.session_state and st.session_state.isSessionCreated is True:
                     save_session_experimental(SessionModel(
                         id_session=id_sesi,
-                        # id_session=f"chat_history_{st.session_state.session_id}",
                         tanggal = formatted_time,
                         title = prompt,
                         id_user = data_login['id']
