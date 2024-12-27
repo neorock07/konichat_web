@@ -12,7 +12,8 @@ def read_conversation():
     """
     for idx, msg in enumerate(st.session_state[MESSAGES]):
         if msg.actor == AI:
-            st.chat_message(AI, avatar="assets/fav.png").write(msg.payload)
+            st.chat_message(AI, avatar="E:/dataku/KONIMEX/chatbot/KoniChan/web/assets/fav.png").write(msg.payload)
+            # st.chat_message(AI, avatar="assets/fav.png").write(msg.payload)
         else:
             st.chat_message(USER, avatar="📌").write(msg.payload)
         if idx == (len(st.session_state[MESSAGES])-1) and 'final_doc' in st.session_state:

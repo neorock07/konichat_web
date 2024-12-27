@@ -187,10 +187,10 @@ def init_rag():
     
     Returns:
         out (dictionary) : (
-        llm (ChatOllama),
-        chunked (Document / str),
-        feed_chunked  (Document), 
-        embed (EmbeddingModel)
+        - llm (ChatOllama),
+        - chunked (Document / str),
+        - feed_chunked  (Document), 
+        - embed (EmbeddingModel)
         )
     Pada kode ini menggunakan model LLM dari Ollama, 
     apabila ingin menggunakan model dari OpenAi maka uncomment 
@@ -210,9 +210,11 @@ def init_rag():
     # """
     #     comment below code if you prefer to use OpenAI instead.
     # """  
-    llm = ChatOllama(model="gemma_8192:latest", 
+    llm = ChatOllama(
+                     model="gemma2b_8192:latest", 
+                    #  model="gemma_8192:latest", 
                      temperature=0.6,
-                     base_url="https://97e3-34-105-46-78.ngrok-free.app")
+                     base_url="https://0b3c-34-83-234-27.ngrok-free.app")
     
     # """
     #     uncomment this code if you use OpenAI services instead.

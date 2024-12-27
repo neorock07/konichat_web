@@ -22,6 +22,7 @@ from widget.read_conversation import read_conversation
 from widget.widget_chat_history import button_list_history
 from widget.button_logout import button_logout
 
+# kode untuk set title tab bar browser dan mengatur favicon.
 st.set_page_config("KoniChat | Chat", page_icon="assets/fav.png")
 
 # """
@@ -67,7 +68,6 @@ if "message_ai" not in st.session_state:
 chat_list = None
 session = None
 rag_chain = None
-def_rag = None
 def_rag = init_rag()
 
        
@@ -307,8 +307,7 @@ if prompt:
         # """
         if len(chat_history) > 5:
             chat_history = chat_history[:5]
-        
-        # st.info(chat_history)   
+          
 
             # """
             #     cek sesi apakah sudah dibuat dan apakah sudah non-aktif,
